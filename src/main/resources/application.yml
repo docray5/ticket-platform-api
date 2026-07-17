@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: ticketing
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ticket_booking_db
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
