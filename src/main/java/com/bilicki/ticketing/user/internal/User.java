@@ -24,11 +24,7 @@ public class User {
     @Setter
     private String passwordHash;
 
-    @Column(
-            name = "role",
-            nullable = false,
-            columnDefinition = "VARCHAR(20) DEFAULT 'CUSTOMER' CHECK (role IN ('ADMIN', 'CUSTOMER'))"
-    )
+    @Column(nullable = false)
     private String role = "CUSTOMER";
 
     @Column(name = "created_at", nullable = false, updatable = false)
