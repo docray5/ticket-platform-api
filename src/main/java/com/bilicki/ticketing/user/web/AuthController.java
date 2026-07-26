@@ -4,10 +4,10 @@ import com.bilicki.ticketing.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
@@ -25,5 +25,11 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @GetMapping(path = "/auth/me")
+    public String getMyId(@AuthenticationPrincipal String userIdString) {
+        UUID userId = UUID.fromString(userIdString);
+        return "You are securely logged in! Your database UUID is: " + userId;
     }
 }
