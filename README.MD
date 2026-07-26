@@ -14,6 +14,9 @@ Scope for the mvp:
 - users being able to browse events, see limited seats/tickets per event, hold a ticket during checkout (with expiry), and complete payment
 - documentation using swagger
 
+Known limitations:
+- secrets are managed via local spring variables for local development but for production AWS deployment or other tools would be used.
+
 The first sketch of the database: (subject to change)
 ![initial db scheme](/docs/initial-db-scheme.png)
 
