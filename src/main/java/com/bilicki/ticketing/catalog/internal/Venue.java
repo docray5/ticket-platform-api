@@ -1,8 +1,10 @@
 package com.bilicki.ticketing.catalog.internal;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -24,4 +26,9 @@ public class Venue {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Venue(String name, String address) {
+        this.name = name;
+        this.address = address;
+    }
 }
