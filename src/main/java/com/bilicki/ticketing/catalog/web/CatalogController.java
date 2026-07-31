@@ -2,6 +2,7 @@ package com.bilicki.ticketing.catalog.web;
 
 import com.bilicki.ticketing.catalog.service.CatalogService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -26,10 +27,10 @@ public class CatalogController {
         return catalogService.getAllVenues();
     }
 
-    @PostMapping(path = "/admin/halls")
+    @PostMapping(path = "/admin/venues/{venueId}/halls")
     @ResponseStatus(HttpStatus.CREATED)
-    public HallResponse createHall(@Valid @RequestBody HallRequest request) {
-        return catalogService.createHall(request);
+    public HallResponse createHall(@PathVariable @NotNull UUID venueId, @Valid @RequestBody HallRequest request) {
+        return catalogService.createHall(venueId, request);
     }
 
     @GetMapping(path = "/admin/halls")

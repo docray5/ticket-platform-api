@@ -39,11 +39,11 @@ public class CatalogService {
         return venueRepository.findAll().stream().map(catalogMapper::toVenueResponse).toList();
     }
 
-    public HallResponse createHall(HallRequest request) {
-        if (hallRepository.existsByVenueIdAndName(request.venueId(), request.name()))
+    public HallResponse createHall(UUID venueId, HallRequest request) {
+        if (hallRepository.existsByVenueIdAndName(venueId, request.name()))
             throw new HallConflictException(request.name());
 
-        Venue venue = venueRepository.findById(request.venueId()).orElseThrow(VenueNotFoundException::new);
+        Venue venue = venueRepository.findById(venueId).orElseThrow(VenueNotFoundException::new);
 
         Hall hall = new Hall(venue, request.name());
 
