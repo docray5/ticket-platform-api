@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface HallRepository extends JpaRepository<Hall, UUID> {
+    boolean existsByVenueIdAndName(UUID venueId, String name);
 }

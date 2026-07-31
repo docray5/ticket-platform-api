@@ -28,4 +28,10 @@ public class Movie {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Movie(String title, String description, Integer durationMinutes) {
+        this.title = title;
+        this.description = description;
+        this.durationMinutes = durationMinutes;
+    }
 }

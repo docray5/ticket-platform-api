@@ -25,4 +25,9 @@ public class Hall {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Hall(Venue venue, String name) {
+        this.venue = venue;
+        this.name = name;
+    }
 }
