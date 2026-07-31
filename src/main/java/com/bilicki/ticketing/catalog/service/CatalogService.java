@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +21,8 @@ public class CatalogService {
     private final CatalogMapper catalogMapper;
     private final VenueRepository venueRepository;
     private final MovieRepository movieRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final ShowtimeSeatRepository showtimeSeatRepository;
 
     public VenueResponse createVenue(VenueRequest request) {
         if (venueRepository.existsVenueByName(request.name()) || venueRepository.existsVenueByAddress(request.address()))
@@ -85,5 +89,34 @@ public class CatalogService {
         }
 
         seatRepository.saveAll(seatsToSave);
+    }
+
+    @Transactional
+    public ShowtimeResponse createShowtime(ShowtimeRequest request) {
+        Hall hall = hallRepository.findById(request.hallId()).orElseThrow(HallNotFoundException::new);
+        Movie movie = movieRepository.findById(request.movieId()).orElseThrow(MovieNotFoundException::new);
+
+        Instant endTime = request.startTime()
+                .plusSeconds(movie.getDurationMinutes() * 60L);
+
+        if (showtimeRepository.existsOverlappingShowtime(hall.getId(), request.startTime(), endTime))
+            throw new ShowtimeConflictException(request.startTime(), endTime);
+
+        Showtime showtime = new Showtime(movie, hall, request.startTime(), endTime, request.basePrice());
+
+        Showtime savedShowtime = showtimeRepository.save(showtime);
+
+        // make this a method
+        List<Seat> seats = seatRepository.getAllByHallId(hall.getId());
+        List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
+
+        seats.forEach(s -> {
+            BigDecimal finalPrice = request.basePrice().multiply(s.getSeatType().getPriceMultiplier());
+            showtimeSeats.add(new ShowtimeSeat(savedShowtime, s, finalPrice));
+        });
+
+        showtimeSeatRepository.saveAll(showtimeSeats);
+
+        return catalogMapper.toShowtimeResponse(savedShowtime);
     }
 }

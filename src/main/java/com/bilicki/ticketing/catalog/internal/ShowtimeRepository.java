@@ -12,8 +12,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, UUID> {
                 SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
                 FROM Showtime s
                 WHERE s.hall.id = :hallId
-                    AND s.startTime < :endTime
-                    AND s.endTime > :startTime
+                    AND s.startTime < :endTime AND s.endTime > :startTime
             """)
     boolean existsOverlappingShowtime(
             @Param("hallId") UUID hallId,

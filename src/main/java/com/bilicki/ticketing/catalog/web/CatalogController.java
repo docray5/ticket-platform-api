@@ -56,4 +56,10 @@ public class CatalogController {
     public void bulkGenerateSeats(@PathVariable UUID hallId, @Valid @RequestBody SeatGenerationRequest request) {
         catalogService.bulkGenerateSeats(hallId, request);
     }
+
+    @PostMapping(path = "/admin/showtimes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ShowtimeResponse createShowtime(@Valid @RequestBody ShowtimeRequest request) {
+        return catalogService.createShowtime(request);
+    }
 }

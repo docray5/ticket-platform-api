@@ -6,5 +6,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
-    List<Seat> findAllByHallId(UUID hallId);
+    List<Seat> getAllByHallId(UUID hallId);
 }

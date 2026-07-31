@@ -36,4 +36,12 @@ public class Showtime {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Showtime(Movie movie, Hall hall, Instant startTime, Instant endTime, BigDecimal basePrice) {
+        this.basePrice = basePrice;
+        this.endTime = endTime;
+        this.startTime = startTime;
+        this.hall = hall;
+        this.movie = movie;
+    }
 }

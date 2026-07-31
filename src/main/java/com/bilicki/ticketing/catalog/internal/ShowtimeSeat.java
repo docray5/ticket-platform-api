@@ -33,4 +33,10 @@ public class ShowtimeSeat {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public ShowtimeSeat(Showtime showtime, Seat seat, BigDecimal price) {
+        this.showtime = showtime;
+        this.seat = seat;
+        this.price = price;
+    }
 }
