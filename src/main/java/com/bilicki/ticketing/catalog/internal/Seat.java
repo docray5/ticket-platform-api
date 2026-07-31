@@ -33,4 +33,11 @@ public class Seat {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Seat(Hall hall, String rowLabel, Short seatNumber, SeatType seatType) {
+        this.hall = hall;
+        this.rowLabel = rowLabel;
+        this.seatNumber = seatNumber;
+        this.seatType = seatType;
+    }
 }

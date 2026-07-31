@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
@@ -48,5 +49,11 @@ public class CatalogController {
     @ResponseStatus(HttpStatus.OK)
     public List<MovieResponse> getAllMovies() {
         return catalogService.getAllMovies();
+    }
+
+    @PostMapping(path = "/admin/halls/{hallId}/seats:bulk-generate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void bulkGenerateSeats(@PathVariable UUID hallId, @Valid @RequestBody SeatGenerationRequest request) {
+        catalogService.bulkGenerateSeats(hallId, request);
     }
 }

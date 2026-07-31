@@ -4,16 +4,21 @@ import com.bilicki.ticketing.catalog.internal.*;
 import com.bilicki.ticketing.catalog.web.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
 public class CatalogService {
-    private HallRepository hallRepository;
-    private CatalogMapper catalogMapper;
-    private VenueRepository venueRepository;
-    private MovieRepository movieRepository;
+    private final SeatTypeRepository seatTypeRepository;
+    private final SeatRepository seatRepository;
+    private final HallRepository hallRepository;
+    private final CatalogMapper catalogMapper;
+    private final VenueRepository venueRepository;
+    private final MovieRepository movieRepository;
 
     public VenueResponse createVenue(VenueRequest request) {
         if (venueRepository.existsVenueByName(request.name()) || venueRepository.existsVenueByAddress(request.address()))
@@ -60,5 +65,25 @@ public class CatalogService {
 
     public List<MovieResponse> getAllMovies() {
         return movieRepository.findAll().stream().map(catalogMapper::toMovieResponse).toList();
+    }
+
+    @Transactional
+    public void bulkGenerateSeats(UUID hallId, SeatGenerationRequest request) {
+        Hall hall = hallRepository.findById(hallId).orElseThrow(HallNotFoundException::new);
+
+        SeatType seatType = seatTypeRepository.findById(request.seatTypeId()).orElseThrow(SeatTypeNotFoundException::new);
+
+        List<Seat> seatsToSave = new ArrayList<>();
+        for (int row = 0; row < request.rowCount(); row++) {
+            for (short seatNumber = 1; seatNumber <= request.seatsPerRow(); seatNumber++) {
+                String rowLabel = Character.toString((char) ('A' + row));
+
+                Seat seat = new Seat(hall, rowLabel, seatNumber, seatType);
+
+                seatsToSave.add(seat);
+            }
+        }
+
+        seatRepository.saveAll(seatsToSave);
     }
 }
