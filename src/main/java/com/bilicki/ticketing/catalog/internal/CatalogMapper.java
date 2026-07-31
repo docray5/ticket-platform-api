@@ -10,7 +10,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface CatalogMapper {
     VenueResponse toVenueResponse(Venue venue);
-    @Mapping(target = "venueId", source = "venue.id")
     HallResponse toHallResponse(Hall hall);
     MovieResponse toMovieResponse(Movie movie);
     @Mapping(target = "hallId", source = "hall.id")

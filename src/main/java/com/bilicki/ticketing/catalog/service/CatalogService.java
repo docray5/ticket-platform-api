@@ -53,7 +53,7 @@ public class CatalogService {
     }
 
     public List<HallResponse> getAllHalls() {
-        return hallRepository.findAll().stream().map(catalogMapper::toHallResponse).toList();
+        return hallRepository.findAllHallsWithVenues().stream().map(catalogMapper::toHallResponse).toList();
     }
 
     public MovieResponse createMovie(MovieRequest request) {
@@ -91,6 +91,10 @@ public class CatalogService {
         seatRepository.saveAll(seatsToSave);
     }
 
+    /**
+     * Before creating a showtime it checks that hall and movie exist and
+     * checks if the new showtime isn't overlapping with any other showtime in that Hall
+     */
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
         Hall hall = hallRepository.findById(request.hallId()).orElseThrow(HallNotFoundException::new);
@@ -106,7 +110,6 @@ public class CatalogService {
 
         Showtime savedShowtime = showtimeRepository.save(showtime);
 
-        // make this a method
         List<Seat> seats = seatRepository.getAllByHallId(hall.getId());
         List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
 
