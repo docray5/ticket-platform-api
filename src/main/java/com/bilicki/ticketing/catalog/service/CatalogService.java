@@ -109,7 +109,7 @@ public class CatalogService {
      * checks if the new showtime isn't overlapping with any other showtime in that Hall
      */
     @Transactional
-    public ShowtimeResponse createShowtime(ShowtimeRequest request) throws Exception {
+    public ShowtimeResponse createShowtime(ShowtimeRequest request) {
         Hall hall = hallRepository.findById(request.hallId()).orElseThrow(HallNotFoundException::new);
         Movie movie = movieRepository.findById(request.movieId()).orElseThrow(MovieNotFoundException::new);
 
