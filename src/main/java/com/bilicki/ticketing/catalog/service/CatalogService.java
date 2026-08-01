@@ -77,7 +77,7 @@ public class CatalogService {
     }
 
     @Transactional
-    public void bulkGenerateSeats(UUID hallId, SeatGenerationRequest request) {
+    public Integer bulkGenerateSeats(UUID hallId, SeatGenerationRequest request) {
         Hall hall = hallRepository.findById(hallId).orElseThrow(HallNotFoundException::new);
 
         if (seatRepository.existsByHallId(hallId))
@@ -96,7 +96,12 @@ public class CatalogService {
             }
         }
 
-        seatRepository.saveAll(seatsToSave);
+        List<Seat> saved = seatRepository.saveAll(seatsToSave);
+        return saved.size();
+    }
+
+    public List<SeatTypeResponse> getAllSeatTypes() {
+        return seatTypeRepository.findAll().stream().map(catalogMapper::toSeatTypeResponse).toList();
     }
 
     /**

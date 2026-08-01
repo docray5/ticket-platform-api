@@ -68,8 +68,8 @@ public class CatalogController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(path = "/admin/halls/{hallId}/seats:bulk-generate")
     @ResponseStatus(HttpStatus.CREATED)
-    public void bulkGenerateSeats(@PathVariable UUID hallId, @Valid @RequestBody SeatGenerationRequest request) {
-        catalogService.bulkGenerateSeats(hallId, request);
+    public Integer bulkGenerateSeats(@PathVariable UUID hallId, @Valid @RequestBody SeatGenerationRequest request) {
+        return catalogService.bulkGenerateSeats(hallId, request);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -77,5 +77,12 @@ public class CatalogController {
     @ResponseStatus(HttpStatus.CREATED)
     public ShowtimeResponse createShowtime(@Valid @RequestBody ShowtimeRequest request) {
         return catalogService.createShowtime(request);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(path = "/admin/seat-types")
+    @ResponseStatus(HttpStatus.OK)
+    public List<SeatTypeResponse> getAllSeatTypes() {
+        return catalogService.getAllSeatTypes();
     }
 }
