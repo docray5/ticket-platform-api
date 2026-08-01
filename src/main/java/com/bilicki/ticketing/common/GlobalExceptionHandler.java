@@ -3,6 +3,7 @@ package com.bilicki.ticketing.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -54,6 +55,19 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please contact support and quote the correlation ID.");
         problemDetail.setType(URI.create("https://api.ticketing.dev/errors/internal-server-error"));
         problemDetail.setTitle("Internal Server Error");
+        problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
+
+        return problemDetail;
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Database constraint violation occurred", ex);
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "A record with this unique information already exists.");
+        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/data-conflict"));
+        problemDetail.setTitle("Data Conflict");
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
         return problemDetail;
