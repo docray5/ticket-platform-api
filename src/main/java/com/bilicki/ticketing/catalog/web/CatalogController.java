@@ -33,7 +33,7 @@ public class CatalogController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(path = "/admin/venues/{venueId}/halls")
     @ResponseStatus(HttpStatus.CREATED)
-    public HallResponse createHall(@PathVariable @NotNull UUID venueId, @Valid @RequestBody HallRequest request) {
+    public HallResponse createHall(@PathVariable UUID venueId, @Valid @RequestBody HallRequest request) {
         return catalogService.createHall(venueId, request);
     }
 

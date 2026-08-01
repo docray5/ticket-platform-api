@@ -15,6 +15,6 @@ public record ShowtimeRequest (
         @NotNull(message = "Start time is required")
         Instant startTime,
         @NotNull(message = "Base price is required")
-        @Positive
+        @Positive(message = "Base price must be greater than zero")
         BigDecimal basePrice
 ) {}

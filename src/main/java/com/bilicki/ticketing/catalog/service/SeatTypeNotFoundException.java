@@ -7,9 +7,9 @@ public class SeatTypeNotFoundException extends DomainException {
     public SeatTypeNotFoundException() {
         super(
                 HttpStatus.NOT_FOUND,
-                "seat-not-found",
-                "Seat Not Found",
-                "The requested seat could not be found."
+                "seat-type-not-found",
+                "Seat type Not Found",
+                "The requested seat type could not be found."
         );
     }
 }

@@ -1,8 +1,9 @@
 package com.bilicki.ticketing.catalog.web;
 
-import jakarta.validation.constraints.NotBlank;
+import java.util.UUID;
 
 public record MovieResponse(
+        UUID id,
         String title,
         String description,
         Integer durationMinutes
