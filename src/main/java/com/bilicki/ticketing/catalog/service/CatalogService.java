@@ -109,7 +109,7 @@ public class CatalogService {
      * checks if the new showtime isn't overlapping with any other showtime in that Hall
      */
     @Transactional
-    public ShowtimeResponse createShowtime(ShowtimeRequest request) {
+    public ShowtimeResponse createShowtime(ShowtimeRequest request) throws Exception {
         Hall hall = hallRepository.findById(request.hallId()).orElseThrow(HallNotFoundException::new);
         Movie movie = movieRepository.findById(request.movieId()).orElseThrow(MovieNotFoundException::new);
 
@@ -124,6 +124,9 @@ public class CatalogService {
         Showtime savedShowtime = showtimeRepository.save(showtime);
 
         List<Seat> seats = seatRepository.getAllByHallId(hall.getId());
+        if (seats.isEmpty())
+            throw new HallEmptyException();
+
         List<ShowtimeSeat> showtimeSeats = new ArrayList<>();
 
         seats.forEach(s -> {
