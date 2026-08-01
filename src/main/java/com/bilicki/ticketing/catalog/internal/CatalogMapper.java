@@ -1,9 +1,6 @@
 package com.bilicki.ticketing.catalog.internal;
 
-import com.bilicki.ticketing.catalog.web.HallResponse;
-import com.bilicki.ticketing.catalog.web.MovieResponse;
-import com.bilicki.ticketing.catalog.web.ShowtimeResponse;
-import com.bilicki.ticketing.catalog.web.VenueResponse;
+import com.bilicki.ticketing.catalog.web.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -15,4 +12,6 @@ public interface CatalogMapper {
     @Mapping(target = "hallId", source = "hall.id")
     @Mapping(target = "movieId", source = "movie.id")
     ShowtimeResponse toShowtimeResponse(Showtime showtime);
+    HallSummaryResponse toHallSummaryResponse(Hall hall);
+    VenueWithHallsResponse toVenueWithHallsResponse(Venue venue);
 }

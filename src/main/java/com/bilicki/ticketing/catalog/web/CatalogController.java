@@ -39,6 +39,11 @@ public class CatalogController {
         return catalogService.getAllHalls();
     }
 
+    @GetMapping(path = "/admin/venues/detailed")
+    @ResponseStatus(HttpStatus.OK)
+    public List<VenueWithHallsResponse> getAllVenuesWithHalls() {
+        return catalogService.getAllVenuesWithHalls();
+    }
 
     @PostMapping(path = "/admin/movies")
     @ResponseStatus(HttpStatus.CREATED)

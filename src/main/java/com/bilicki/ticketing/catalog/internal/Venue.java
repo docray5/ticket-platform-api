@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -23,6 +25,9 @@ public class Venue {
 
     @Column(nullable = false)
     private String address;
+
+    @OneToMany(mappedBy = "venue")
+    private List<Hall> halls = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();

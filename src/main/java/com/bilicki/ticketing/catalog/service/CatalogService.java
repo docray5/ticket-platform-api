@@ -56,6 +56,11 @@ public class CatalogService {
         return hallRepository.findAllHallsWithVenues().stream().map(catalogMapper::toHallResponse).toList();
     }
 
+    public List<VenueWithHallsResponse> getAllVenuesWithHalls() {
+        return venueRepository.findAllVenuesWithHalls().stream().map(catalogMapper::toVenueWithHallsResponse).toList();
+    }
+
+
     public MovieResponse createMovie(MovieRequest request) {
         if (movieRepository.existsMovieByTitle(request.title()))
             throw new MovieConflictException(request.title());
