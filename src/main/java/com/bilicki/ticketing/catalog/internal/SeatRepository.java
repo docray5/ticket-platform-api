@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface SeatRepository extends JpaRepository<Seat, UUID> {
     List<Seat> getAllByHallId(UUID hallId);
+    boolean existsByHallId(UUID hallId);
 }

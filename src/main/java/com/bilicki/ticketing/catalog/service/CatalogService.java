@@ -80,6 +80,9 @@ public class CatalogService {
     public void bulkGenerateSeats(UUID hallId, SeatGenerationRequest request) {
         Hall hall = hallRepository.findById(hallId).orElseThrow(HallNotFoundException::new);
 
+        if (seatRepository.existsByHallId(hallId))
+            throw new SeatsAlreadyGeneratedException(hallId);
+
         SeatType seatType = seatTypeRepository.findById(request.seatTypeId()).orElseThrow(SeatTypeNotFoundException::new);
 
         List<Seat> seatsToSave = new ArrayList<>();
