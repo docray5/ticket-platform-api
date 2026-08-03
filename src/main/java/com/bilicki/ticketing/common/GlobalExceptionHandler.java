@@ -3,6 +3,7 @@ package com.bilicki.ticketing.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -19,6 +20,9 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @Value("${app.error.base-uri}")
+    private String errorBaseUri;
+
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String CORRELATION_ID_KEY = "correlationId";
 
@@ -27,7 +31,7 @@ public class GlobalExceptionHandler {
         log.warn("Domain exception occurred: {}", ex.getMessage());
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
-        problemDetail.setType(URI.create(ex.getType()));
+        problemDetail.setType(URI.create(errorBaseUri + ex.getType()));
         problemDetail.setTitle(ex.getTitle());
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
@@ -37,7 +41,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationException(MethodArgumentNotValidException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request payload");
-        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/validation-failed"));
+        problemDetail.setType(URI.create(errorBaseUri + "validation-failed"));
         problemDetail.setTitle("Validation Failed");
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
@@ -55,7 +59,7 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred. Please contact support and quote the correlation ID.");
-        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/internal-server-error"));
+        problemDetail.setType(URI.create(errorBaseUri + "internal-server-error"));
         problemDetail.setTitle("Internal Server Error");
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
@@ -68,7 +72,7 @@ public class GlobalExceptionHandler {
 
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "A record with this unique information already exists.");
-        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/data-conflict"));
+        problemDetail.setType(URI.create(errorBaseUri + "data-conflict"));
         problemDetail.setTitle("Data Conflict");
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
@@ -81,7 +85,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN,
                 "You do not have permission to access this resource."
         );
-        problemDetail.setType(URI.create("access-denied"));
+        problemDetail.setType(URI.create(errorBaseUri + "access-denied"));
         problemDetail.setTitle("Access Denied");
 
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));

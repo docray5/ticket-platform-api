@@ -29,3 +29,7 @@ logging:
 jwt:
   secret: ${JWT_SECRET:1142811c5bbf83f925b31b92aa1610037cad2c16ff45138081407099c1a4d2a1}
   expiration-ms: 3600000
+
+app:
+  error:
+    base-uri: "https://api.ticketing.dev/errors/"

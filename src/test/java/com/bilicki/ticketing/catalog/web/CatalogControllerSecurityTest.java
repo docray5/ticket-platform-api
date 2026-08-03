@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ProblemDetailReposeWriter.class
 })
 public class CatalogControllerSecurityTest {
+    private final String errorBaseUri = "https://api.ticketing.dev/errors/";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -61,7 +63,7 @@ public class CatalogControllerSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VENUE_BODY))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.type").value("access-denied"))
+                .andExpect(jsonPath("$.type").value(errorBaseUri + "access-denied"))
                 .andExpect(jsonPath("$.status").value(403));
 
         verify(catalogService, never()).createVenue(any());
@@ -73,7 +75,7 @@ public class CatalogControllerSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VENUE_BODY))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.type").value("unauthorized"));
+                .andExpect(jsonPath("$.type").value(errorBaseUri + "unauthorized"));
 
         verify(catalogService, never()).createVenue(any());
     }
