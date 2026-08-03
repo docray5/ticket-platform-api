@@ -214,11 +214,11 @@ public class CatalogServiceTest {
         verify(showtimeSeatRepository, never()).saveAll(any());
     }
 
+    @Test
     void bulkGenerateSeats_Success() {
         UUID hallId = UUID.randomUUID();
         Hall hall = new Hall(new Venue("Some Venue", "Address"), "Hall");
         ReflectionTestUtils.setField(hall, "id", hallId);
-
 
         UUID seatTypeId = UUID.randomUUID();
         SeatType seatType = new SeatType();
