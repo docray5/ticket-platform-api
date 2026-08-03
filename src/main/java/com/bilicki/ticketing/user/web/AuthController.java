@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @RestController
 @AllArgsConstructor
+@RequestMapping("/api/v1")
 public class AuthController {
 
     private AuthService authService;

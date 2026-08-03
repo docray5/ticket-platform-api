@@ -48,7 +48,7 @@ public class CatalogControllerSecurityTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminCanCreateVenue() throws Exception {
-        mockMvc.perform(post("/admin/venues")
+        mockMvc.perform(post("/api/v1/admin/venues")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VENUE_BODY))
                 .andExpect(status().isCreated());
@@ -57,7 +57,7 @@ public class CatalogControllerSecurityTest {
     @Test
     @WithMockUser(roles = "CUSTOMER")
     void customerIsForbidden() throws Exception {
-        mockMvc.perform(post("/admin/venues")
+        mockMvc.perform(post("/api/v1/admin/venues")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VENUE_BODY))
                 .andExpect(status().isForbidden())
@@ -69,7 +69,7 @@ public class CatalogControllerSecurityTest {
 
     @Test
     void anonymousIsUnauthorized() throws Exception {
-        mockMvc.perform(post("/admin/venues")
+        mockMvc.perform(post("/api/v1/admin/venues")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VENUE_BODY))
                 .andExpect(status().isUnauthorized())
