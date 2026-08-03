@@ -1,6 +1,6 @@
 package com.bilicki.ticketing.config;
 
-import com.bilicki.ticketing.common.ProblemDetialReponseWriter;
+import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ProblemDetialReponseWriter responseWriter;
+    private final ProblemDetailReposeWriter responseWriter;
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {

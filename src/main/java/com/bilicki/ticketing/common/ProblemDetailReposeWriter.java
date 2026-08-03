@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.net.URI;
 
 @Component
-public class ProblemDetialReponseWriter {
+public class ProblemDetailReposeWriter {
     private static final String CORRELATION_ID_KEY = "correlationId";
 
     private final ObjectMapper objectMapper;
 
-    public ProblemDetialReponseWriter(ObjectMapper objectMapper) {
+    public ProblemDetailReposeWriter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

@@ -81,7 +81,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.FORBIDDEN,
                 "You do not have permission to access this resource."
         );
-        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/forbidden"));
+        problemDetail.setType(URI.create("access-denied"));
         problemDetail.setTitle("Access Denied");
 
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));

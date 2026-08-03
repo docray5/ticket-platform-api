@@ -1,6 +1,6 @@
 package com.bilicki.ticketing.config;
 
-import com.bilicki.ticketing.common.ProblemDetialReponseWriter;
+import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +15,14 @@ import java.io.IOException;
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ProblemDetialReponseWriter responseWriter;
+    private final ProblemDetailReposeWriter responseWriter;
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         responseWriter.write(
                 response,
                 HttpStatus.UNAUTHORIZED,
-                "https://api.ticketing.dev/errors/unauthorized",
+                "unauthorized",
                 "Authentication Required",
                 "A valid Bearer token is required to access this resource."
         );
