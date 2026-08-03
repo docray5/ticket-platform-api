@@ -6,6 +6,8 @@ import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -68,6 +70,20 @@ public class GlobalExceptionHandler {
                 "A record with this unique information already exists.");
         problemDetail.setType(URI.create("https://api.ticketing.dev/errors/data-conflict"));
         problemDetail.setTitle("Data Conflict");
+        problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
+
+        return problemDetail;
+    }
+
+    @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+    public ProblemDetail handleAccessDeniedException(Exception ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource."
+        );
+        problemDetail.setType(URI.create("https://api.ticketing.dev/errors/forbidden"));
+        problemDetail.setTitle("Access Denied");
+
         problemDetail.setProperty(CORRELATION_ID_KEY, MDC.get(CORRELATION_ID_KEY));
 
         return problemDetail;
