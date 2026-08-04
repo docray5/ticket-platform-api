@@ -49,7 +49,7 @@ public class CatalogControllerTest {
 
         when(catalogService.createVenue(any(VenueRequest.class))).thenReturn(venueResponse);
 
-        mockMvc.perform(post("/admin/venues")
+        mockMvc.perform(post("/api/v1/admin/venues")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(venueRequest)))
                 .andExpect(status().isCreated())
@@ -62,7 +62,7 @@ public class CatalogControllerTest {
     void createVenue_ShouldReturn400BadRequest() throws Exception {
         VenueRequest venueRequest = new VenueRequest(null, "Some Street 123");
 
-        mockMvc.perform(post("/admin/venues")
+        mockMvc.perform(post("/api/v1/admin/venues")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(venueRequest)))
                 .andExpect(status().isBadRequest());
@@ -75,7 +75,7 @@ public class CatalogControllerTest {
 
         when(catalogService.getAllVenues()).thenReturn(List.of(response1, response2));
 
-        mockMvc.perform(get("/admin/venues").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/venues").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()").value(2))
                 .andExpect(jsonPath("$[0].id").value(response1.id().toString()))
