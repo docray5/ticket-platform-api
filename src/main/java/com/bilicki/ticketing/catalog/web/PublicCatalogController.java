@@ -2,6 +2,7 @@ package com.bilicki.ticketing.catalog.web;
 
 import com.bilicki.ticketing.catalog.service.CatalogService;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,7 @@ public class PublicCatalogController {
 
     @GetMapping("/movies")
     @ResponseStatus(HttpStatus.OK)
-    public List<MovieResponse> getAllMovies(@PageableDefault(size = 20) Pageable pageable) {
+    public Page<MovieResponse> getAllMovies(@PageableDefault(size = 20) Pageable pageable) {
         return catalogService.getAllMovies(pageable);
     }
 
