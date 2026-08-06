@@ -27,13 +27,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = CatalogController.class,
+        controllers = AdminCatalogController.class,
         excludeAutoConfiguration = {SecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class},
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
                 classes = {SecurityConfig.class, JwtAuthenticationFilter.class})
 )
 @AutoConfigureMockMvc(addFilters = false)
-public class CatalogControllerTest {
+public class AdminCatalogControllerTest {
     @MockitoBean
     private CatalogService catalogService;
 

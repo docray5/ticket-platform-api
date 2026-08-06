@@ -3,6 +3,7 @@ package com.bilicki.ticketing.catalog.service;
 import com.bilicki.ticketing.catalog.internal.*;
 import com.bilicki.ticketing.catalog.web.*;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -137,5 +138,20 @@ public class CatalogService {
         showtimeSeatRepository.saveAll(showtimeSeats);
 
         return catalogMapper.toShowtimeResponse(savedShowtime);
+    }
+
+    public MovieResponse getMovieById(UUID movieId) {
+        Movie movie = movieRepository.findById(movieId).orElseThrow(MovieNotFoundException::new);
+        return catalogMapper.toMovieResponse(movie);
+    }
+
+    public List<MovieResponse> getAllMovies(Pageable pageable) {
+        return movieRepository.findAll(pageable).stream().map(catalogMapper::toMovieResponse).toList();
+    }
+
+    public List<ShowtimeResponse> getAllShowtimesByMovieId(UUID movieId) {
+        if (!movieRepository.existsById(movieId))
+            throw new MovieNotFoundException();
+        return showtimeRepository.findAllByMovieId(movieId).stream().map(catalogMapper::toShowtimeResponse).toList();
     }
 }
