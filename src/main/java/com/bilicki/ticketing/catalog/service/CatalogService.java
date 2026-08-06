@@ -160,16 +160,8 @@ public class CatalogService {
         if (!seatRepository.existsByHallId(showtime.getHall().getId()))
             throw new HallEmptyException();
 
-        List<ShowtimeSeat> showtimeSeats = showtimeSeatRepository.findAllByShowtimeId(showtimeId);
-
-        List<ShowtimeSeatResponse> showtimeSeatResponses = new ArrayList<>();
-
-        for (ShowtimeSeat s : showtimeSeats) {
-            Seat seat = s.getSeat();
-            showtimeSeatResponses.add(new ShowtimeSeatResponse(
-                    s.getId(), seat.getRowLabel(), seat.getSeatNumber(), seat.getSeatType().getName(), s.getPrice(), s.getStatus()
-            ));
-        }
+        List<ShowtimeSeatResponse> showtimeSeatResponses = showtimeSeatRepository.findAllByShowtimeId(showtimeId)
+                .stream().map(catalogMapper::toShowtimeSeatResponse).toList();
 
         return new ShowtimeSeatMapResponse(showtimeId, catalogMapper.toHallSummaryResponse(showtime.getHall()), showtimeSeatResponses);
     }

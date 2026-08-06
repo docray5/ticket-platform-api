@@ -15,5 +15,9 @@ public interface CatalogMapper {
     HallSummaryResponse toHallSummaryResponse(Hall hall);
     VenueWithHallsResponse toVenueWithHallsResponse(Venue venue);
     SeatTypeResponse toSeatTypeResponse(SeatType seatType);
+    @Mapping(target = "showtimeSeatId", source = "id")
+    @Mapping(target = "row", source = "seat.rowLabel")
+    @Mapping(target = "number", source = "seat.seatNumber")
+    @Mapping(target = "type", source = "seat.seatType.name")
     ShowtimeSeatResponse toShowtimeSeatResponse(ShowtimeSeat showtimeSeat);
 }
