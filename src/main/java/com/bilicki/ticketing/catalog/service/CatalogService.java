@@ -158,8 +158,8 @@ public class CatalogService {
 
     public ShowtimeSeatMapResponse getSeatMapByShowtimeId(UUID showtimeId) {
         Showtime showtime = showtimeRepository.findById(showtimeId).orElseThrow(ShowtimeNotFoundException::new);
-        if (!seatRepository.existsByHallId(showtime.getHall().getId()))
-            throw new HallEmptyException();
+        if (!showtimeSeatRepository.existsByShowtimeId(showtimeId))
+            throw new EmptyShowtimeSeatsException(showtimeId);
 
         List<ShowtimeSeatResponse> showtimeSeatResponses = showtimeSeatRepository.findAllByShowtimeId(showtimeId)
                 .stream().map(catalogMapper::toShowtimeSeatResponse).toList();
