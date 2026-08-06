@@ -28,10 +28,15 @@ public class PublicCatalogController {
         return catalogService.getMovieById(movieId);
     }
 
-
     @GetMapping("/movies/{movieId}/showtimes")
     @ResponseStatus(HttpStatus.OK)
     public List<ShowtimeResponse> getAllShowtimesByMovieId(@PathVariable UUID movieId) {
         return catalogService.getAllShowtimesByMovieId(movieId);
+    }
+
+    @GetMapping("/showtimes/{showtimeId}/seats")
+    @ResponseStatus(HttpStatus.OK)
+    public ShowtimeSeatMapResponse getShowtimeSeatMap(@PathVariable UUID showtimeId) {
+        return catalogService.getSeatMapByShowtimeId(showtimeId);
     }
 }

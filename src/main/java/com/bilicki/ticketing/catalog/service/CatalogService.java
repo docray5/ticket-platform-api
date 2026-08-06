@@ -154,4 +154,23 @@ public class CatalogService {
             throw new MovieNotFoundException();
         return showtimeRepository.findAllByMovieId(movieId).stream().map(catalogMapper::toShowtimeResponse).toList();
     }
+
+    public ShowtimeSeatMapResponse getSeatMapByShowtimeId(UUID showtimeId) {
+        Showtime showtime = showtimeRepository.findById(showtimeId).orElseThrow(ShowtimeNotFoundException::new);
+        if (!seatRepository.existsByHallId(showtime.getHall().getId()))
+            throw new HallEmptyException();
+
+        List<ShowtimeSeat> showtimeSeats = showtimeSeatRepository.findAllByShowtimeId(showtimeId);
+
+        List<ShowtimeSeatResponse> showtimeSeatResponses = new ArrayList<>();
+
+        for (ShowtimeSeat s : showtimeSeats) {
+            Seat seat = s.getSeat();
+            showtimeSeatResponses.add(new ShowtimeSeatResponse(
+                    s.getId(), seat.getRowLabel(), seat.getSeatNumber(), seat.getSeatType().getName(), s.getPrice(), s.getStatus()
+            ));
+        }
+
+        return new ShowtimeSeatMapResponse(showtimeId, catalogMapper.toHallSummaryResponse(showtime.getHall()), showtimeSeatResponses);
+    }
 }

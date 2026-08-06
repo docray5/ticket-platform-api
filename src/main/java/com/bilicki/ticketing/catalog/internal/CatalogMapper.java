@@ -15,4 +15,5 @@ public interface CatalogMapper {
     HallSummaryResponse toHallSummaryResponse(Hall hall);
     VenueWithHallsResponse toVenueWithHallsResponse(Venue venue);
     SeatTypeResponse toSeatTypeResponse(SeatType seatType);
+    ShowtimeSeatResponse toShowtimeSeatResponse(ShowtimeSeat showtimeSeat);
 }
