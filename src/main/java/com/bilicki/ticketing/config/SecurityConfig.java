@@ -42,7 +42,11 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/**",
                                 "/api/v1/auth/register",
-                                "/api/v1/auth/login"
+                                "/api/v1/auth/login",
+                                "/api/v1/movies",
+                                "/api/v1/movies/{movieId}",
+                                "/api/v1/movies/{movieId}/showtimes",
+                                "/api/v1/showtimes/{showtimeId}/seats"
                         ).permitAll().anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

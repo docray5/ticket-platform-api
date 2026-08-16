@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.catalog.web;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
@@ -13,6 +14,7 @@ public record ShowtimeRequest (
         @NotNull(message = "Hall ID is required")
         UUID hallId,
         @NotNull(message = "Start time is required")
+        @Future
         Instant startTime,
         @NotNull(message = "Base price is required")
         @Positive(message = "Base price must be greater than zero")

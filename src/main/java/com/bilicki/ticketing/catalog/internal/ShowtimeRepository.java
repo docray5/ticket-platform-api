@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public interface ShowtimeRepository extends JpaRepository<Showtime, UUID> {
@@ -19,4 +20,5 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, UUID> {
             @Param("startTime") Instant startTime,
             @Param("endTime") Instant endTime
     );
+    List<Showtime> findAllByMovieId(UUID movieId);
 }

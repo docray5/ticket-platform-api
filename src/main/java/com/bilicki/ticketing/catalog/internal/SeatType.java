@@ -23,4 +23,9 @@ public class SeatType {
 
     @Column(name = "price_multiplier", nullable = false)
     private BigDecimal priceMultiplier = BigDecimal.ONE;
+
+    public SeatType(String name, BigDecimal priceMultiplier) {
+        this.name = name;
+        this.priceMultiplier = priceMultiplier;
+    }
 }

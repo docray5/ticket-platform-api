@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = CatalogController.class)
+@WebMvcTest(controllers = AdminCatalogController.class)
 @Import({
         SecurityConfig.class,
         JwtAuthenticationFilter.class,
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         RestAuthenticationEntryPoint.class,
         ProblemDetailReposeWriter.class
 })
-public class CatalogControllerSecurityTest {
+public class AdminCatalogControllerSecurityTest {
     private final String errorBaseUri = "https://api.ticketing.dev/errors/";
 
     @Autowired
