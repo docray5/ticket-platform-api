@@ -1,0 +1,41 @@
+package com.bilicki.ticketing.booking.internal;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+@NoArgsConstructor
+@Table(name = "holds")
+@Getter
+@Entity
+public class Hold {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(name = "showtime_id", nullable = false)
+    private UUID showtimeId;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Column(nullable = false)
+    private String status = "ACTIVE";
+
+    @Column(nullable = false, name = "total_price")
+    private BigDecimal totalPrice;
+
+    @Column(nullable = false, name = "expires_at")
+    private Instant expiresAt;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private Instant createdAt = Instant.now();
+}
