@@ -1,6 +1,7 @@
 package com.bilicki.ticketing.catalog;
 
 import com.bilicki.ticketing.catalog.internal.*;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -169,5 +170,103 @@ public class CatalogFacadeTest {
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(failureCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    public void shouldReleaseHeldSeatsBackToAvailable() {
+        showtimeSeat1.setStatus("HELD");
+        showtimeSeat2.setStatus("HELD");
+        showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
+
+        List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId());
+
+        transactionTemplate.execute(status -> {
+            catalogFacade.releaseShowtimeSeats(showtime.getId(), showtimeSeatIds);
+            return null;
+        });
+
+        List<ShowtimeSeat> updatedSeats = showtimeSeatRepository.findAllById(showtimeSeatIds);
+        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly("AVAILABLE");
+    }
+
+    @Test
+    public void shouldSilentlyIgnoreAlreadyBookedOrMissingSeatsDuringRelease() {
+        showtimeSeat1.setStatus("BOOKED");
+        showtimeSeat2.setStatus("AVAILABLE");
+        showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
+
+        UUID fakeSeatId = UUID.randomUUID();
+        List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId(), fakeSeatId);
+
+        transactionTemplate.execute(status -> {
+            catalogFacade.releaseShowtimeSeats(showtime.getId(), showtimeSeatIds);
+            return null;
+        });
+
+        ShowtimeSeat reloaded1 = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
+        ShowtimeSeat reloaded2 = showtimeSeatRepository.findById(showtimeSeat2.getId()).orElseThrow();
+
+        assertThat(reloaded1.getStatus()).isEqualTo("BOOKED");
+        assertThat(reloaded2.getStatus()).isEqualTo("AVAILABLE");
+    }
+
+    @Test
+    public void shouldDoNothingWhenReleaseListIsEmpty() {
+        transactionTemplate.execute(status -> {
+            catalogFacade.releaseShowtimeSeats(showtime.getId(), List.of());
+            return null;
+        });
+    }
+
+    @Test
+    public void shouldConfirmHeldSeatsToBooked() {
+        showtimeSeat1.setStatus("HELD");
+        showtimeSeat2.setStatus("HELD");
+        showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
+
+        List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId());
+
+        transactionTemplate.execute(status -> {
+            catalogFacade.confirmShowtimeSeats(showtime.getId(), showtimeSeatIds);
+            return null;
+        });
+
+        List<ShowtimeSeat> updatedSeats = showtimeSeatRepository.findAllById(showtimeSeatIds);
+        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly("BOOKED");
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenConfirmingSeatsThatAreNotHeld() {
+        List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId());
+
+        assertThatThrownBy(() ->
+                transactionTemplate.execute(status -> {
+                    catalogFacade.confirmShowtimeSeats(showtime.getId(), showtimeSeatIds);
+                    return null;
+                })
+        )
+                .isInstanceOf(SeatUnavailableException.class)
+                .hasMessageContaining("Seats with these IDs have been taken or already expired")
+                .extracting("unavailableSeatIds")
+                .asInstanceOf(InstanceOfAssertFactories.list(UUID.class))
+                .containsExactlyInAnyOrder(showtimeSeat1.getId(), showtimeSeat2.getId());
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenConfirmingMissingSeats() {
+        UUID fakeSeatId = UUID.randomUUID();
+        List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), fakeSeatId);
+
+        assertThatThrownBy(() ->
+                transactionTemplate.execute(status -> {
+                    catalogFacade.confirmShowtimeSeats(showtime.getId(), showtimeSeatIds);
+                    return null;
+                })
+        )
+                .isInstanceOf(SeatUnavailableException.class)
+                .hasMessageContaining("Seats with these IDs do not exist")
+                .extracting("unavailableSeatIds")
+                .asInstanceOf(InstanceOfAssertFactories.list(UUID.class))
+                .containsExactly(fakeSeatId);
     }
 }

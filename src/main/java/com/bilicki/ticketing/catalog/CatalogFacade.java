@@ -10,4 +10,8 @@ public interface CatalogFacade {
      * @return the total price of all requested seats
      */
     BigDecimal reserveShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds);
+
+    void releaseShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds);
+
+    void confirmShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds);
 }
