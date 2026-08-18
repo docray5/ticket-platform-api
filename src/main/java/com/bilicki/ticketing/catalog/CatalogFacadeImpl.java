@@ -9,7 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +20,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
 
     private void verifyRequestedSeatsExist(List<ShowtimeSeat> seats, List<UUID> requestedShowtimeSeatIds) throws SeatUnavailableException {
         if (seats.size() != requestedShowtimeSeatIds.size()) {
-            List<UUID> foundIds = seats.stream().map(ShowtimeSeat::getId).toList();
+            Set<UUID> foundIds = seats.stream().map(ShowtimeSeat::getId).collect(Collectors.toSet());
             List<UUID> missingIds = requestedShowtimeSeatIds.stream().filter(id -> !foundIds.contains(id)).toList();
             throw new SeatUnavailableException("Seats with these IDs do not exist: ", missingIds);
         }
