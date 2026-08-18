@@ -24,7 +24,7 @@ public class Booking {
     private UUID userId;
 
     @JoinColumn(name = "hold_id")
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     private Hold hold;
 
     @Column(nullable = false)

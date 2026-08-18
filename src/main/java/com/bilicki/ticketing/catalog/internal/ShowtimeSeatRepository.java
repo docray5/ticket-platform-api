@@ -1,6 +1,8 @@
 package com.bilicki.ticketing.catalog.internal;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,4 +16,10 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, UUID
     List<ShowtimeSeat> findAllByShowtimeId(@Param("showtimeId") UUID showtimeId);
 
     boolean existsByShowtimeId(UUID showtimeId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT ss FROM ShowtimeSeat ss WHERE ss.showtime.id = :showtimeId AND ss.id in :showtimeSeatIds
+    """)
+    List<ShowtimeSeat> findAndLockAllByShowtimeIdAndInSeatIds(UUID showtimeId, List<UUID> showtimeSeatIds);
 }

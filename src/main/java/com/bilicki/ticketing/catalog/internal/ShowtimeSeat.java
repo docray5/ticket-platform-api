@@ -3,6 +3,7 @@ package com.bilicki.ticketing.catalog.internal;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -28,6 +29,7 @@ public class ShowtimeSeat {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Setter
     @Column(nullable = false)
     private String status = "AVAILABLE";
 
