@@ -137,7 +137,6 @@ public class CatalogFacadeTest {
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         CountDownLatch startLatch = new CountDownLatch(1);
-
         CountDownLatch doneLatch = new CountDownLatch(2);
 
         AtomicInteger successCount = new AtomicInteger(0);
@@ -170,6 +169,59 @@ public class CatalogFacadeTest {
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(failureCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    public void shouldPreventRaceConditionBetweenHoldExpiryAndBookingConfirmation() throws InterruptedException {
+        showtimeSeat1.setStatus("HELD");
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+
+                transactionTemplate.execute(status -> {
+                    catalogFacade.releaseShowtimeSeats(showtime.getId(), List.of(showtimeSeat1.getId()));
+                    return null;
+                });
+            } catch (Exception ignored) {
+            } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        AtomicInteger exceptionCount = new AtomicInteger(0);
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                transactionTemplate.execute(status -> {
+                    catalogFacade.confirmShowtimeSeats(showtime.getId(), List.of(showtimeSeat1.getId()));
+                    return null;
+                });
+            } catch (SeatUnavailableException e) {
+                exceptionCount.incrementAndGet();
+            } catch (Exception ignored) { } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        startLatch.countDown();
+        doneLatch.await(2, TimeUnit.SECONDS);
+
+        ShowtimeSeat finalSeat = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
+
+        assertThat(finalSeat.getStatus()).isIn("BOOKED", "AVAILABLE");
+
+        if (finalSeat.getStatus().equals("AVAILABLE")) {
+            assertThat(exceptionCount.get()).isEqualTo(1);
+        } else {
+            assertThat(finalSeat.getStatus()).isEqualTo("BOOKED");
+            assertThat(exceptionCount.get()).isEqualTo(0);
+        }
     }
 
     @Test
