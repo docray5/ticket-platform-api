@@ -1,7 +1,6 @@
 package com.bilicki.ticketing.catalog;
 
 import com.bilicki.ticketing.catalog.internal.*;
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +17,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
@@ -125,5 +129,45 @@ public class CatalogFacadeTest {
 
         ShowtimeSeat reloadedA1 = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
         assertThat(reloadedA1.getStatus()).isEqualTo("AVAILABLE");
+    }
+
+    @Test
+    public void shouldPreventDoubleBookingWhenTwoUsersRequestSameSeatConcurrently() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        CountDownLatch doneLatch = new CountDownLatch(2);
+
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failureCount = new AtomicInteger(0);
+
+        Runnable concurrentTask = () -> {
+            try {
+                startLatch.await();
+
+                transactionTemplate.execute(status ->
+                        catalogFacade.reserveShowtimeSeats(showtime.getId(), List.of(showtimeSeat1.getId()))
+                );
+
+                successCount.incrementAndGet();
+            } catch (SeatUnavailableException e) {
+                failureCount.incrementAndGet();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } finally {
+                doneLatch.countDown();
+            }
+        };
+
+        executor.submit(concurrentTask);
+        executor.submit(concurrentTask);
+
+        startLatch.countDown();
+
+        doneLatch.await(2, TimeUnit.SECONDS);
+
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(failureCount.get()).isEqualTo(1);
     }
 }
