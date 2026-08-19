@@ -101,7 +101,7 @@ public class CatalogFacadeTest {
         assertThat(totalPrice).isEqualByComparingTo("30.00");
 
         List<ShowtimeSeat> updatedShowtimeSeats = showtimeSeatRepository.findAllById(showtimeSeatIds);
-        assertThat(updatedShowtimeSeats).extracting(ShowtimeSeat::getStatus).containsOnly("HELD");
+        assertThat(updatedShowtimeSeats).extracting(ShowtimeSeat::getStatus).containsOnly(ShowtimeSeat.SeatStatus.HELD);
     }
 
     @Test
@@ -118,7 +118,7 @@ public class CatalogFacadeTest {
 
     @Test
     public void shouldThrowExceptionWhenSeatsAreAlreadyHeld() {
-        showtimeSeat2.setStatus("HELD");
+        showtimeSeat2.setStatus(ShowtimeSeat.SeatStatus.HELD);
         showtimeSeatRepository.saveAndFlush(showtimeSeat2);
 
         List<UUID> showtimeSeatIds = Stream.of(showtimeSeat1, showtimeSeat2).map(ShowtimeSeat::getId).toList();
@@ -129,7 +129,7 @@ public class CatalogFacadeTest {
                 .hasMessageContaining(showtimeSeat2.getId().toString());
 
         ShowtimeSeat reloadedA1 = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
-        assertThat(reloadedA1.getStatus()).isEqualTo("AVAILABLE");
+        assertThat(reloadedA1.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.AVAILABLE);
     }
 
     @Test
@@ -173,7 +173,7 @@ public class CatalogFacadeTest {
 
     @Test
     public void shouldPreventRaceConditionBetweenHoldExpiryAndBookingConfirmation() throws InterruptedException {
-        showtimeSeat1.setStatus("HELD");
+        showtimeSeat1.setStatus(ShowtimeSeat.SeatStatus.HELD);
         showtimeSeatRepository.saveAndFlush(showtimeSeat1);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -215,20 +215,20 @@ public class CatalogFacadeTest {
 
         ShowtimeSeat finalSeat = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
 
-        assertThat(finalSeat.getStatus()).isIn("BOOKED", "AVAILABLE");
+        assertThat(finalSeat.getStatus()).isIn(ShowtimeSeat.SeatStatus.BOOKED, ShowtimeSeat.SeatStatus.AVAILABLE);
 
-        if (finalSeat.getStatus().equals("AVAILABLE")) {
+        if (finalSeat.getStatus().equals(ShowtimeSeat.SeatStatus.AVAILABLE)) {
             assertThat(exceptionCount.get()).isEqualTo(1);
         } else {
-            assertThat(finalSeat.getStatus()).isEqualTo("BOOKED");
+            assertThat(finalSeat.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.BOOKED);
             assertThat(exceptionCount.get()).isEqualTo(0);
         }
     }
 
     @Test
     public void shouldReleaseHeldSeatsBackToAvailable() {
-        showtimeSeat1.setStatus("HELD");
-        showtimeSeat2.setStatus("HELD");
+        showtimeSeat1.setStatus(ShowtimeSeat.SeatStatus.HELD);
+        showtimeSeat2.setStatus(ShowtimeSeat.SeatStatus.HELD);
         showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
 
         List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId());
@@ -239,13 +239,13 @@ public class CatalogFacadeTest {
         });
 
         List<ShowtimeSeat> updatedSeats = showtimeSeatRepository.findAllById(showtimeSeatIds);
-        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly("AVAILABLE");
+        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly(ShowtimeSeat.SeatStatus.AVAILABLE);
     }
 
     @Test
     public void shouldSilentlyIgnoreAlreadyBookedOrMissingSeatsDuringRelease() {
-        showtimeSeat1.setStatus("BOOKED");
-        showtimeSeat2.setStatus("AVAILABLE");
+        showtimeSeat1.setStatus(ShowtimeSeat.SeatStatus.BOOKED);
+        showtimeSeat2.setStatus(ShowtimeSeat.SeatStatus.AVAILABLE);
         showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
 
         UUID fakeSeatId = UUID.randomUUID();
@@ -259,8 +259,8 @@ public class CatalogFacadeTest {
         ShowtimeSeat reloaded1 = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
         ShowtimeSeat reloaded2 = showtimeSeatRepository.findById(showtimeSeat2.getId()).orElseThrow();
 
-        assertThat(reloaded1.getStatus()).isEqualTo("BOOKED");
-        assertThat(reloaded2.getStatus()).isEqualTo("AVAILABLE");
+        assertThat(reloaded1.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.BOOKED);
+        assertThat(reloaded2.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.AVAILABLE);
     }
 
     @Test
@@ -273,8 +273,8 @@ public class CatalogFacadeTest {
 
     @Test
     public void shouldConfirmHeldSeatsToBooked() {
-        showtimeSeat1.setStatus("HELD");
-        showtimeSeat2.setStatus("HELD");
+        showtimeSeat1.setStatus(ShowtimeSeat.SeatStatus.HELD);
+        showtimeSeat2.setStatus(ShowtimeSeat.SeatStatus.HELD);
         showtimeSeatRepository.saveAllAndFlush(List.of(showtimeSeat1, showtimeSeat2));
 
         List<UUID> showtimeSeatIds = List.of(showtimeSeat1.getId(), showtimeSeat2.getId());
@@ -285,7 +285,7 @@ public class CatalogFacadeTest {
         });
 
         List<ShowtimeSeat> updatedSeats = showtimeSeatRepository.findAllById(showtimeSeatIds);
-        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly("BOOKED");
+        assertThat(updatedSeats).extracting(ShowtimeSeat::getStatus).containsOnly(ShowtimeSeat.SeatStatus.BOOKED);
     }
 
     @Test

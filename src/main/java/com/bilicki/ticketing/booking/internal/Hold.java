@@ -13,6 +13,10 @@ import java.util.UUID;
 @Getter
 @Entity
 public class Hold {
+    public enum HoldStatus {
+        ACTIVE, CONFIRMED, EXPIRED, CANCELLED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -24,7 +28,8 @@ public class Hold {
     private UUID userId;
 
     @Column(nullable = false)
-    private String status = "ACTIVE";
+    @Enumerated(EnumType.STRING)
+    private HoldStatus status = HoldStatus.ACTIVE;
 
     @Column(nullable = false, name = "total_price")
     private BigDecimal totalPrice;

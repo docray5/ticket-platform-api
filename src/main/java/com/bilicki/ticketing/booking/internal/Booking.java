@@ -13,6 +13,10 @@ import java.util.UUID;
 @Getter
 @Entity
 public class Booking {
+    public enum BookingStatus {
+        CONFIRMED, CANCELLED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -28,7 +32,8 @@ public class Booking {
     private Hold hold;
 
     @Column(nullable = false)
-    private String status = "CONFIRMED";
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status = BookingStatus.CONFIRMED;
 
     @Column(nullable = false, name = "total_price")
     private BigDecimal totalPrice;

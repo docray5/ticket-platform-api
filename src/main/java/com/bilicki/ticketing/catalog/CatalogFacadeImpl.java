@@ -26,7 +26,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
         }
     }
 
-    private void verifySeatStatus(String status, String message, List<ShowtimeSeat> seats) {
+    private void verifySeatStatus(ShowtimeSeat.SeatStatus status, String message, List<ShowtimeSeat> seats) {
         List<UUID> unavailableSeatIds = seats
                 .stream()
                 .filter(showtimeSeat -> !showtimeSeat.getStatus().equals(status))
@@ -45,12 +45,12 @@ public class CatalogFacadeImpl implements CatalogFacade {
 
         verifyRequestedSeatsExist(reservedSeats, showtimeSeatIds);
 
-        verifySeatStatus("AVAILABLE", "One or more requested seats are not available with these IDs: ", reservedSeats);
+        verifySeatStatus(ShowtimeSeat.SeatStatus.AVAILABLE, "One or more requested seats are not available with these IDs: ", reservedSeats);
 
         BigDecimal totalPrice = BigDecimal.ZERO;
         for (ShowtimeSeat s : reservedSeats) {
             totalPrice = totalPrice.add(s.getPrice());
-            s.setStatus("HELD");
+            s.setStatus(ShowtimeSeat.SeatStatus.HELD);
         }
 
         return totalPrice;
@@ -63,8 +63,8 @@ public class CatalogFacadeImpl implements CatalogFacade {
         List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
 
         for (ShowtimeSeat s : lockedSeats)
-            if (s.getStatus().equals("HELD"))
-                s.setStatus("AVAILABLE");
+            if (s.getStatus().equals(ShowtimeSeat.SeatStatus.HELD))
+                s.setStatus(ShowtimeSeat.SeatStatus.AVAILABLE);
     }
 
     @Override
@@ -75,9 +75,9 @@ public class CatalogFacadeImpl implements CatalogFacade {
 
         verifyRequestedSeatsExist(lockedSeats, showtimeSeatIds);
 
-        verifySeatStatus("HELD", "Seats with these IDs have been taken or already expired: ", lockedSeats);
+        verifySeatStatus(ShowtimeSeat.SeatStatus.HELD, "Seats with these IDs have been taken or already expired: ", lockedSeats);
 
         for (ShowtimeSeat s : lockedSeats)
-            s.setStatus("BOOKED");
+            s.setStatus(ShowtimeSeat.SeatStatus.BOOKED);
     }
 }

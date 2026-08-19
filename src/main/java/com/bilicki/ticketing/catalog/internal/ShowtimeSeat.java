@@ -14,6 +14,10 @@ import java.util.UUID;
 @Getter
 @Entity
 public class ShowtimeSeat {
+    public enum SeatStatus {
+        AVAILABLE, HELD, BOOKED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -31,7 +35,8 @@ public class ShowtimeSeat {
 
     @Setter
     @Column(nullable = false)
-    private String status = "AVAILABLE";
+    @Enumerated(EnumType.STRING)
+    private SeatStatus status = SeatStatus.AVAILABLE;
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
