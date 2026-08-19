@@ -16,7 +16,7 @@ public class SeatUnavailableException extends DomainException {
                 HttpStatus.CONFLICT,
                 "seat-unavailable",
                 "The requested seats are unavailable.",
-                message + unavailableSeatIds.toString()
+                message + unavailableSeatIds
         );
         this.unavailableSeatIds = unavailableSeatIds;
     }

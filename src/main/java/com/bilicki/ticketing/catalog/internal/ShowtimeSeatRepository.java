@@ -19,7 +19,7 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, UUID
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT ss FROM ShowtimeSeat ss WHERE ss.showtime.id = :showtimeId AND ss.id in :showtimeSeatIds
+        SELECT ss FROM ShowtimeSeat ss WHERE ss.showtime.id = :showtimeId AND ss.id in :showtimeSeatIds ORDER BY ss.id
     """)
-    List<ShowtimeSeat> findAndLockAllByShowtimeIdAndInSeatIds(UUID showtimeId, List<UUID> showtimeSeatIds);
+    List<ShowtimeSeat> findAndLockAllByShowtimeIdAndInSeatIds(@Param("showtimeId") UUID showtimeId, @Param("showtimeSeatIds") List<UUID> showtimeSeatIds);
 }

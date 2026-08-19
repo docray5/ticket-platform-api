@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class CatalogFacadeImpl implements CatalogFacade {
     private final ShowtimeSeatRepository showtimeSeatRepository;
 
-    private void verifyRequestedSeatsExist(List<ShowtimeSeat> seats, List<UUID> requestedShowtimeSeatIds) throws SeatUnavailableException {
+    private void verifyRequestedSeatsExist(List<ShowtimeSeat> seats, List<UUID> requestedShowtimeSeatIds) {
         if (seats.size() != requestedShowtimeSeatIds.size()) {
             Set<UUID> foundIds = seats.stream().map(ShowtimeSeat::getId).collect(Collectors.toSet());
             List<UUID> missingIds = requestedShowtimeSeatIds.stream().filter(id -> !foundIds.contains(id)).toList();
@@ -26,7 +26,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
         }
     }
 
-    private void verifySeatStatus(String status, String message, List<ShowtimeSeat> seats) throws SeatUnavailableException {
+    private void verifySeatStatus(String status, String message, List<ShowtimeSeat> seats) {
         List<UUID> unavailableSeatIds = seats
                 .stream()
                 .filter(showtimeSeat -> !showtimeSeat.getStatus().equals(status))
@@ -40,6 +40,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public BigDecimal reserveShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds) {
+        if (showtimeSeatIds.isEmpty()) return BigDecimal.ZERO;
         List<ShowtimeSeat> reservedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
 
         verifyRequestedSeatsExist(reservedSeats, showtimeSeatIds);
@@ -58,9 +59,10 @@ public class CatalogFacadeImpl implements CatalogFacade {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void releaseShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds) {
-        List<ShowtimeSeat> reservedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
+        if (showtimeSeatIds.isEmpty()) return;
+        List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
 
-        for (ShowtimeSeat s : reservedSeats)
+        for (ShowtimeSeat s : lockedSeats)
             if (s.getStatus().equals("HELD"))
                 s.setStatus("AVAILABLE");
     }
@@ -68,13 +70,14 @@ public class CatalogFacadeImpl implements CatalogFacade {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void confirmShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds) {
-        List<ShowtimeSeat> reservedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
+        if (showtimeSeatIds.isEmpty()) return;
+        List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findAndLockAllByShowtimeIdAndInSeatIds(showtimeId, showtimeSeatIds);
 
-        verifyRequestedSeatsExist(reservedSeats, showtimeSeatIds);
+        verifyRequestedSeatsExist(lockedSeats, showtimeSeatIds);
 
-        verifySeatStatus("HELD", "Seats with these IDs have been taken or already expired: ", reservedSeats);
+        verifySeatStatus("HELD", "Seats with these IDs have been taken or already expired: ", lockedSeats);
 
-        for (ShowtimeSeat s : reservedSeats)
+        for (ShowtimeSeat s : lockedSeats)
             s.setStatus("BOOKED");
     }
 }

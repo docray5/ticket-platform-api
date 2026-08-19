@@ -165,7 +165,7 @@ public class CatalogFacadeTest {
 
         startLatch.countDown();
 
-        doneLatch.await(2, TimeUnit.SECONDS);
+        assertThat(doneLatch.await(5, TimeUnit.SECONDS)).isTrue();
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(failureCount.get()).isEqualTo(1);
@@ -174,6 +174,7 @@ public class CatalogFacadeTest {
     @Test
     public void shouldPreventRaceConditionBetweenHoldExpiryAndBookingConfirmation() throws InterruptedException {
         showtimeSeat1.setStatus("HELD");
+        showtimeSeatRepository.saveAndFlush(showtimeSeat1);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
@@ -210,7 +211,7 @@ public class CatalogFacadeTest {
         });
 
         startLatch.countDown();
-        doneLatch.await(2, TimeUnit.SECONDS);
+        assertThat(doneLatch.await(5, TimeUnit.SECONDS)).isTrue();
 
         ShowtimeSeat finalSeat = showtimeSeatRepository.findById(showtimeSeat1.getId()).orElseThrow();
 
