@@ -58,7 +58,7 @@ Booking (`ROLE_CUSTOMER`)
     {
       "holdId": "awdawd123",
       "showtimeId": "awdaydw123-...",
-      "seatIds": ["s-A1", "s-A2"],
+      "seats": [{ "showtimeSeatId": "..." }],
       "status": "ACTIVE",
       "totalPrice": 25.00,
       "createdAt": "2026-07-16T10:10:00Z",
