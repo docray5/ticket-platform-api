@@ -25,4 +25,9 @@ public class HoldSeat {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public HoldSeat(Hold hold, UUID showtimeSeatId) {
+        this.hold = hold;
+        this.showtimeSeatId = showtimeSeatId;
+    }
 }

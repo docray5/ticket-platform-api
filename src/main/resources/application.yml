@@ -33,3 +33,7 @@ jwt:
 app:
   error:
     base-uri: "https://api.ticketing.dev/errors/"
+
+booking:
+  hold:
+    ttl-minutes: 5
