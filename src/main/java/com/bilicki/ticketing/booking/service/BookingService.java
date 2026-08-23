@@ -23,11 +23,16 @@ public class BookingService {
     private final CatalogFacade catalogFacade;
     private final Clock clock;
 
-    @Value("${booking.hold.ttl-minutes:5}")
+    @Value("${booking.hold.ttl-minutes}")
     private long holdTtlMinutes;
 
     @Transactional
     public HoldResponse createHold(UUID showtimeId, UUID userId, HoldRequest request) {
+        long distinctSeats = request.showtimeSeatIds().stream().distinct().count();
+        if (distinctSeats != request.showtimeSeatIds().size()) {
+            throw new DuplicateSeatsException();
+        }
+
         BigDecimal totalPrice = catalogFacade.reserveShowtimeSeats(showtimeId, request.showtimeSeatIds());
 
         Hold hold = new Hold(showtimeId, userId, totalPrice, Instant.now(clock).plus(holdTtlMinutes, ChronoUnit.MINUTES));
