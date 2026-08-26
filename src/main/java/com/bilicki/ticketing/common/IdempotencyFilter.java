@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -93,14 +92,17 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 
         try {
             filterChain.doFilter(cachedRequest, cachedResponse);
-        } finally {
-            String responseBody = new String(cachedResponse.getContentAsByteArray(), StandardCharsets.UTF_8);
 
+            String responseBody = new String(cachedResponse.getContentAsByteArray(), StandardCharsets.UTF_8);
             idempotencyKey.setStatus(IdempotencyKey.IdempotencyStatus.COMPLETED);
             idempotencyKey.setResponseBody(responseBody);
             idempotencyKey.setResponseStatus(cachedResponse.getStatus());
             idempotencyKeyRepository.save(idempotencyKey);
 
+        } catch (Exception e) {
+            idempotencyKeyRepository.delete(idempotencyKey);
+            throw e;
+        } finally {
             cachedResponse.copyBodyToResponse();
         }
     }
