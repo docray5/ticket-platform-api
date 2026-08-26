@@ -1,6 +1,7 @@
 package com.bilicki.ticketing.catalog.web;
 
 import com.bilicki.ticketing.catalog.service.CatalogService;
+import com.bilicki.ticketing.common.IdempotencyKeyRepository;
 import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
 import com.bilicki.ticketing.config.JwtAuthenticationFilter;
 import com.bilicki.ticketing.config.RestAccessDeniedHandler;
@@ -15,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Clock;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -42,6 +45,12 @@ public class AdminCatalogControllerSecurityTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private IdempotencyKeyRepository idempotencyKeyRepository;
+
+    @MockitoBean
+    private Clock clock;
 
     private static final String VENUE_BODY = """
             {"name": "Cool Venue", "address": "Some Street 123"}
