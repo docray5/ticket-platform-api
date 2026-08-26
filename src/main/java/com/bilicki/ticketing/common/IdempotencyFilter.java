@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,8 @@ public class IdempotencyFilter extends OncePerRequestFilter {
     private final Clock clock;
     private final ProblemDetailReposeWriter problemDetailReposeWriter;
 
+    private final Long expiryHours;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String key = request.getHeader("Idempotency-Key");
@@ -50,7 +53,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
         CachedBodyHttpServletRequest cachedRequest = new CachedBodyHttpServletRequest(request);
         String requestHash = hashBody(cachedRequest.getCachedBody());
 
-        IdempotencyKey idempotencyKey = new IdempotencyKey(key, userId, endpoint, requestHash, Instant.now(clock).plus(5, ChronoUnit.MINUTES));
+        IdempotencyKey idempotencyKey = new IdempotencyKey(key, userId, endpoint, requestHash, Instant.now(clock).plus(expiryHours, ChronoUnit.HOURS));
 
         try {
             idempotencyKeyRepository.saveAndFlush(idempotencyKey);

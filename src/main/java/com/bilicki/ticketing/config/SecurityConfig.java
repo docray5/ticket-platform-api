@@ -3,7 +3,8 @@ package com.bilicki.ticketing.config;
 import com.bilicki.ticketing.common.IdempotencyFilter;
 import com.bilicki.ticketing.common.IdempotencyKeyRepository;
 import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -22,7 +23,7 @@ import java.time.Clock;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -31,6 +32,9 @@ public class SecurityConfig {
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final Clock clock;
     private final ProblemDetailReposeWriter problemDetailReposeWriter;
+
+    @Value("${app.idempotency.expiration-hours}")
+    private Long idempotencyExpiryHours;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -59,7 +63,7 @@ public class SecurityConfig {
                         ).permitAll().anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(new IdempotencyFilter(idempotencyKeyRepository, clock, problemDetailReposeWriter), AuthorizationFilter.class)
+                .addFilterAfter(new IdempotencyFilter(idempotencyKeyRepository, clock, problemDetailReposeWriter, idempotencyExpiryHours), AuthorizationFilter.class)
                 .build();
     }
 }

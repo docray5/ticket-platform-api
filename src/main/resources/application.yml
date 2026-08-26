@@ -33,6 +33,8 @@ jwt:
 app:
   error:
     base-uri: "https://api.ticketing.dev/errors/"
+  idempotency:
+    expiration-hours: 24
 
 booking:
   hold:
