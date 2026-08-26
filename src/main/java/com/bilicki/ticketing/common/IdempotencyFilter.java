@@ -82,7 +82,11 @@ public class IdempotencyFilter extends OncePerRequestFilter {
             }
 
             response.setStatus(existingKey.getResponseStatus());
-            response.setContentType("application/json");
+            if (existingKey.getResponseStatus() >= 400) {
+                response.setContentType("application/problem+json");
+            } else {
+                response.setContentType("application/json");
+            }
             response.getWriter().write(existingKey.getResponseBody());
 
             return;
