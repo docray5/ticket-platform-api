@@ -34,6 +34,7 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
@@ -116,13 +117,15 @@ public class IdempotencyFilterConcurrencyTest {
         }
 
         startLatch.countDown();
+        boolean completed = doneLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
+        assertThat(completed).isTrue();
 
-        doneLatch.await();
         executor.shutdown();
 
         assertThat(httpStatuses).hasSize(2);
-
         assertThat(httpStatuses).containsExactlyInAnyOrder(201, 409);
+
+        verify(bookingService, org.mockito.Mockito.times(1)).createHold(any(), any(), any());
 
         List<IdempotencyKey> savedKeys = idempotencyKeyRepository.findAll();
         assertThat(savedKeys).hasSize(1);
