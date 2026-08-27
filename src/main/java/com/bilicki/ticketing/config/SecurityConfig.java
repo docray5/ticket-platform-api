@@ -2,7 +2,7 @@ package com.bilicki.ticketing.config;
 
 import com.bilicki.ticketing.common.IdempotencyFilter;
 import com.bilicki.ticketing.common.IdempotencyKeyRepository;
-import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
+import com.bilicki.ticketing.common.ProblemDetailResponseWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,7 +31,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final Clock clock;
-    private final ProblemDetailReposeWriter problemDetailReposeWriter;
+    private final ProblemDetailResponseWriter problemDetailResponseWriter;
 
     @Value("${app.idempotency.expiration-hours}")
     private Long idempotencyExpiryHours;
@@ -63,7 +63,7 @@ public class SecurityConfig {
                         ).permitAll().anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(new IdempotencyFilter(idempotencyKeyRepository, clock, problemDetailReposeWriter, idempotencyExpiryHours), AuthorizationFilter.class)
+                .addFilterAfter(new IdempotencyFilter(idempotencyKeyRepository, clock, problemDetailResponseWriter, idempotencyExpiryHours), AuthorizationFilter.class)
                 .build();
     }
 }

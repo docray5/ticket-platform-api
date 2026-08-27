@@ -2,7 +2,7 @@ package com.bilicki.ticketing.catalog.web;
 
 import com.bilicki.ticketing.catalog.service.CatalogService;
 import com.bilicki.ticketing.common.IdempotencyKeyRepository;
-import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
+import com.bilicki.ticketing.common.ProblemDetailResponseWriter;
 import com.bilicki.ticketing.config.JwtAuthenticationFilter;
 import com.bilicki.ticketing.config.RestAccessDeniedHandler;
 import com.bilicki.ticketing.config.RestAuthenticationEntryPoint;
@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         JwtAuthenticationFilter.class,
         RestAccessDeniedHandler.class,
         RestAuthenticationEntryPoint.class,
-        ProblemDetailReposeWriter.class
+        ProblemDetailResponseWriter.class
 })
 public class AdminCatalogControllerSecurityTest {
     private final String errorBaseUri = "https://api.ticketing.dev/errors/";

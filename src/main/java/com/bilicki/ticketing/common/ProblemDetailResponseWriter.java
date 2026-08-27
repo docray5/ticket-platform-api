@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.net.URI;
 
 @Component
-public class ProblemDetailReposeWriter {
+public class ProblemDetailResponseWriter {
     @Value("${app.error.base-uri}")
     private String errorBaseUri;
 
@@ -21,7 +21,7 @@ public class ProblemDetailReposeWriter {
 
     private final ObjectMapper objectMapper;
 
-    public ProblemDetailReposeWriter(ObjectMapper objectMapper) {
+    public ProblemDetailResponseWriter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

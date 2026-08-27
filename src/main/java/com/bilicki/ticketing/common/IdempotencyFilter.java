@@ -27,7 +27,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
     private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final Clock clock;
-    private final ProblemDetailReposeWriter problemDetailReposeWriter;
+    private final ProblemDetailResponseWriter problemDetailResponseWriter;
 
     private final Long expiryHours;
 
@@ -35,7 +35,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String key = request.getHeader("Idempotency-Key");
         if (key == null || key.isBlank()) {
-            problemDetailReposeWriter.write(
+            problemDetailResponseWriter.write(
                     response,
                     HttpStatus.BAD_REQUEST,
                     "missing-idempotency-key",
@@ -60,7 +60,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
             IdempotencyKey existingKey = idempotencyKeyRepository.findByKeyAndUserIdAndEndpoint(key, userId, endpoint).orElseThrow();
 
             if (!existingKey.getRequestHash().equals(requestHash)) {
-                problemDetailReposeWriter.write(
+                problemDetailResponseWriter.write(
                         response,
                         HttpStatus.UNPROCESSABLE_CONTENT,
                         "idempotency-conflict",
@@ -71,7 +71,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
             }
 
             if (existingKey.getStatus() == IdempotencyKey.IdempotencyStatus.PENDING) {
-                problemDetailReposeWriter.write(
+                problemDetailResponseWriter.write(
                         response,
                         HttpStatus.CONFLICT,
                         "concurrent-request",
