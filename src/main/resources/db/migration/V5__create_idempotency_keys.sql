@@ -9,5 +9,8 @@ CREATE TABLE idempotency_keys (
     response_status INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at TIMESTAMPTZ NOT NULL,
-    UNIQUE(key, user_id, endpoint)
+    UNIQUE(key, user_id, endpoint),
+    CHECK (status = 'PENDING' OR (response_status IS NOT NULL AND response_body IS NOT NULL))
 );
+
+CREATE INDEX idx_idempotency_keys_expires_at ON idempotency_keys(expires_at);
