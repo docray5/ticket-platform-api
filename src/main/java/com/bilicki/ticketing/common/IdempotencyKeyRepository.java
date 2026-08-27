@@ -2,9 +2,12 @@ package com.bilicki.ticketing.common;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface IdempotencyKeyRepository extends JpaRepository<IdempotencyKey, UUID> {
     Optional<IdempotencyKey> findByKeyAndUserIdAndEndpoint(String key, UUID userId, String endpoint);
+
+    int deleteAllByExpiresAtBefore(Instant time);
 }
