@@ -5,7 +5,9 @@ import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class BookingService {
     private final BookingMapper bookingMapper;
     private final CatalogFacade catalogFacade;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${booking.hold.ttl-minutes}")
     private long holdTtlMinutes;
@@ -41,7 +44,11 @@ public class BookingService {
 
         Hold savedHold = holdRepository.save(hold);
 
-        // TODO create a message in rabbit MQ (Later)
+        eventPublisher.publishEvent(new HoldCreateEvent(
+                        savedHold.getId(), showtimeId,
+                        savedHold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList(),
+                        MDC.get("correlationId"))
+        );
 
         return bookingMapper.toHoldResponse(savedHold);
     }
