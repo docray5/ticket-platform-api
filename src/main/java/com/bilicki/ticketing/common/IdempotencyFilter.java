@@ -97,12 +97,15 @@ public class IdempotencyFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(cachedRequest, cachedResponse);
 
-            String responseBody = new String(cachedResponse.getContentAsByteArray(), StandardCharsets.UTF_8);
-            idempotencyKey.setStatus(IdempotencyKey.IdempotencyStatus.COMPLETED);
-            idempotencyKey.setResponseBody(responseBody);
-            idempotencyKey.setResponseStatus(cachedResponse.getStatus());
-            idempotencyKeyRepository.save(idempotencyKey);
-
+            if (cachedResponse.getStatus() >= 500) {
+                idempotencyKeyRepository.delete(idempotencyKey);
+            } else {
+                String responseBody = new String(cachedResponse.getContentAsByteArray(), StandardCharsets.UTF_8);
+                idempotencyKey.setStatus(IdempotencyKey.IdempotencyStatus.COMPLETED);
+                idempotencyKey.setResponseBody(responseBody);
+                idempotencyKey.setResponseStatus(cachedResponse.getStatus());
+                idempotencyKeyRepository.save(idempotencyKey);
+            }
         } catch (Exception e) {
             idempotencyKeyRepository.delete(idempotencyKey);
             throw e;
