@@ -12,11 +12,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class HoldMessagePublisher {
     private final RabbitTemplate rabbitTemplate;
 
-    @Value("${rabbitmq.delay-queue-name}")
+    @Value("${booking.rabbitmq.delay-queue-name}")
     private String delayQueueName;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void sendHoldCreateEvent(HoldCreateEvent event) {
+    public void sendHoldCreateEvent(HoldExpiryMessage event) {
         rabbitTemplate.convertAndSend("", delayQueueName, event);
     }
 }

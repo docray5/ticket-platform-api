@@ -44,7 +44,7 @@ public class BookingService {
 
         Hold savedHold = holdRepository.save(hold);
 
-        eventPublisher.publishEvent(new HoldCreateEvent(
+        eventPublisher.publishEvent(new HoldExpiryMessage(
                         savedHold.getId(), showtimeId,
                         savedHold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList(),
                         MDC.get("correlationId"))

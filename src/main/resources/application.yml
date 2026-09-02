@@ -45,9 +45,8 @@ app:
 booking:
   hold:
     ttl-minutes: 5
-
-rabbitmq:
-  queue-name: "hold.expiry.queue"
-  delay-queue-name: "hold.expiry.delay.queue"
-  exchange-name: "hold.expiry.exchange"
-  key-name: "hold.expiry.key"
+  rabbitmq:
+    queue-name: "hold.expiry.queue"
+    delay-queue-name: "hold.expiry.delay.queue"
+    exchange-name: "hold.expiry.exchange"
+    key-name: "hold.expiry.key"

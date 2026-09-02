@@ -9,14 +9,14 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMqConfig {
-    @Value("${rabbitmq.queue-name}")
+    @Value("${booking.rabbitmq.queue-name}")
     private String queueName;
-    @Value("${rabbitmq.exchange-name}")
+    @Value("${booking.rabbitmq.exchange-name}")
     private String directExchangeName;
-    @Value("${rabbitmq.key-name}")
+    @Value("${booking.rabbitmq.key-name}")
     private String routingKeyName;
 
-    @Value("${rabbitmq.delay-queue-name}")
+    @Value("${booking.rabbitmq.delay-queue-name}")
     private String delayQueueName;
 
     @Value("${booking.hold.ttl-minutes}")

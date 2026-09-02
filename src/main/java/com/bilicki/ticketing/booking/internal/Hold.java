@@ -3,6 +3,7 @@ package com.bilicki.ticketing.booking.internal;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -31,6 +32,7 @@ public class Hold {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Setter
     private HoldStatus status = HoldStatus.ACTIVE;
 
     @Column(nullable = false, name = "total_price")
