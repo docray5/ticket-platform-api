@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,12 +45,21 @@ public class BookingService {
 
         Hold savedHold = holdRepository.save(hold);
 
-        eventPublisher.publishEvent(new HoldExpiryMessage(
-                        savedHold.getId(), showtimeId,
-                        savedHold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList(),
-                        MDC.get("correlationId"))
-        );
+        eventPublisher.publishEvent(new HoldExpiryMessage(savedHold.getId(), MDC.get("correlationId")));
 
         return bookingMapper.toHoldResponse(savedHold);
+    }
+
+    @Transactional
+    public void transitionHoldStatusFromActiveTo(UUID holdId, Hold.HoldStatus status) {
+        Hold hold = holdRepository.findAndLockById(holdId).orElseThrow();
+
+        if (hold.getStatus() == Hold.HoldStatus.ACTIVE) {
+            hold.setStatus(status);
+
+            List<UUID> showtimeSeatIds = hold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList();
+
+            catalogFacade.releaseShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
+        }
     }
 }

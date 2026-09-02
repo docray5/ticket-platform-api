@@ -16,7 +16,7 @@ public class HoldMessagePublisher {
     private String delayQueueName;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void sendHoldCreateEvent(HoldExpiryMessage event) {
+    public void scheduleHoldExpiry(HoldExpiryMessage event) {
         rabbitTemplate.convertAndSend("", delayQueueName, event);
     }
 }

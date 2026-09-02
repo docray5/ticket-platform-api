@@ -1,8 +1,6 @@
 package com.bilicki.ticketing.booking.service;
 
 import com.bilicki.ticketing.booking.internal.Hold;
-import com.bilicki.ticketing.booking.internal.HoldRepository;
-import com.bilicki.ticketing.catalog.CatalogFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -16,8 +14,7 @@ import java.util.NoSuchElementException;
 @Component
 @RequiredArgsConstructor
 public class HoldMessageListener {
-    private final CatalogFacade catalogFacade;
-    private final HoldRepository holdRepository;
+    private final BookingService bookingService;
 
     @RabbitListener(queues = "${booking.rabbitmq.queue-name}")
     @Transactional
@@ -25,12 +22,7 @@ public class HoldMessageListener {
         MDC.put("correlationId", event.correlationId());
 
         try {
-            Hold hold = holdRepository.findAndLockById(event.holdId()).orElseThrow();
-
-            if (hold.getStatus() == Hold.HoldStatus.ACTIVE) {
-                hold.setStatus(Hold.HoldStatus.EXPIRED);
-                catalogFacade.releaseShowtimeSeats(event.showtimeId(), event.showtimeSeatIds());
-            }
+            bookingService.transitionHoldStatusFromActiveTo(event.holdId(), Hold.HoldStatus.EXPIRED);
         } catch (NoSuchElementException e) {
             log.warn("Hold {} not found during expiry check", event.holdId());
         } catch (Exception e) {
