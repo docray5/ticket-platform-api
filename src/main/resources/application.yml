@@ -45,7 +45,7 @@ app:
 booking:
   hold:
     ttl: 5m
-  rabbitmq:
+  rabbit-mq:
     queue-name: "hold.expiry.queue"
     delay-queue-name: "hold.expiry.delay.queue"
     exchange-name: "hold.expiry.exchange"

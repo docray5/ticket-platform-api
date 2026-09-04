@@ -1,6 +1,5 @@
 package com.bilicki.ticketing.booking.web;
 
-
 import com.bilicki.ticketing.booking.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -23,5 +22,11 @@ public class BookingController {
     public HoldResponse createHold(@PathVariable UUID showtimeId, @AuthenticationPrincipal String userIdString, @Valid @RequestBody HoldRequest request) {
         // TODO idempotency check (Later in the Idempotency Filter)
         return bookingService.createHold(showtimeId, UUID.fromString(userIdString), request);
+    }
+
+    @DeleteMapping(path = "/holds/{holdId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelHold(@PathVariable UUID holdId, @AuthenticationPrincipal String userIdString) {
+        bookingService.cancelHold(holdId, UUID.fromString(userIdString));
     }
 }

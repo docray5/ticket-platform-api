@@ -3,6 +3,7 @@ package com.bilicki.ticketing.booking;
 import com.bilicki.ticketing.booking.internal.Hold;
 import com.bilicki.ticketing.booking.internal.HoldRepository;
 import com.bilicki.ticketing.booking.service.BookingService;
+import com.bilicki.ticketing.booking.service.HoldExpiredException;
 import com.bilicki.ticketing.booking.service.HoldExpiryMessage;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
@@ -31,6 +32,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -173,5 +179,62 @@ class HoldExpiryIntegrationTest {
             ShowtimeSeat reloadedSeat = showtimeSeatRepository.findById(showtimeSeatA.getId()).orElseThrow();
             assertThat(reloadedSeat.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.HELD);
         });
+    }
+
+    @Test
+    void shouldPreventRaceConditionBetweenCancelAndExpire() throws InterruptedException {
+        User savedUser = userRepository.save(new User("email", "pass"));
+        List<UUID> seatIds = List.of(showtimeSeatA.getId());
+        HoldResponse holdResponse = bookingService.createHold(showtime.getId(), savedUser.getId(), new HoldRequest(seatIds));
+        UUID holdId = holdResponse.holdId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+
+        AtomicInteger cancelSuccessCount = new AtomicInteger(0);
+        AtomicInteger cancelExceptionCount = new AtomicInteger(0);
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                bookingService.cancelHold(holdId, savedUser.getId());
+                cancelSuccessCount.incrementAndGet();
+            } catch (HoldExpiredException e) {
+                cancelExceptionCount.incrementAndGet();
+            } catch (Exception ignored) {
+            } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+            } catch (Exception ignored) {
+            } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        startLatch.countDown();
+        assertThat(doneLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        Hold finalHold = holdRepository.findById(holdId).orElseThrow();
+        ShowtimeSeat finalSeat = showtimeSeatRepository.findById(showtimeSeatA.getId()).orElseThrow();
+
+        assertThat(finalHold.getStatus()).isIn(Hold.HoldStatus.CANCELLED, Hold.HoldStatus.EXPIRED);
+
+        assertThat(finalSeat.getStatus()).isEqualTo(ShowtimeSeat.SeatStatus.AVAILABLE);
+
+        if (finalHold.getStatus() == Hold.HoldStatus.CANCELLED) {
+            assertThat(cancelSuccessCount.get()).isEqualTo(1);
+            assertThat(cancelExceptionCount.get()).isEqualTo(0);
+        } else {
+            assertThat(finalHold.getStatus()).isEqualTo(Hold.HoldStatus.EXPIRED);
+            assertThat(cancelSuccessCount.get()).isEqualTo(0);
+            assertThat(cancelExceptionCount.get()).isEqualTo(1);
+        }
     }
 }

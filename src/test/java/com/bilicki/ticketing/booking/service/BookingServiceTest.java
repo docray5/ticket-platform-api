@@ -8,6 +8,7 @@ import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import com.bilicki.ticketing.catalog.SeatUnavailableException;
+import com.bilicki.ticketing.common.ForbiddenActionException;
 import com.bilicki.ticketing.config.BookingProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -225,6 +226,87 @@ public class BookingServiceTest {
         assertThrows(NoSuchElementException.class, () ->
                 bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED));
 
+        verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
+    }
+
+    @Test
+    void cancelHold_Success() {
+        UUID holdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID showtimeId = UUID.randomUUID();
+        UUID seatId = UUID.randomUUID();
+
+        Hold hold = new Hold(showtimeId, userId, BigDecimal.TEN, Instant.now());
+        hold.getSeats().add(new HoldSeat(hold, seatId));
+
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        bookingService.cancelHold(holdId, userId);
+
+        assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.CANCELLED);
+        verify(catalogFacade).releaseShowtimeSeats(showtimeId, List.of(seatId));
+    }
+
+    @Test
+    void cancelHold_Idempotent_WhenAlreadyCancelled() {
+        UUID holdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
+        hold.setStatus(Hold.HoldStatus.CANCELLED);
+
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        bookingService.cancelHold(holdId, userId);
+
+        verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
+    }
+
+    @Test
+    void cancelHold_ThrowsForbidden_WhenUserMismatch() {
+        UUID holdId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID hackerId = UUID.randomUUID();
+
+        Hold hold = new Hold(UUID.randomUUID(), ownerId, BigDecimal.TEN, Instant.now());
+
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThrows(ForbiddenActionException.class, () ->
+                bookingService.cancelHold(holdId, hackerId)
+        );
+        verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
+    }
+
+    @Test
+    void cancelHold_ThrowsHoldExpired_WhenHoldIsExpired() {
+        UUID holdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
+        hold.setStatus(Hold.HoldStatus.EXPIRED);
+
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThrows(HoldExpiredException.class, () ->
+                bookingService.cancelHold(holdId, userId)
+        );
+        verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
+    }
+
+    @Test
+    void cancelHold_ThrowsHoldAlreadyConfirmed_WhenHoldIsConfirmed() {
+        UUID holdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
+        hold.setStatus(Hold.HoldStatus.CONFIRMED);
+
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThrows(HoldAlreadyConfirmedException.class, () ->
+                bookingService.cancelHold(holdId, userId)
+        );
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 }

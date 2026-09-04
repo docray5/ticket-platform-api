@@ -4,6 +4,7 @@ import com.bilicki.ticketing.booking.internal.*;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
+import com.bilicki.ticketing.common.ForbiddenActionException;
 import com.bilicki.ticketing.config.BookingProperties;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
@@ -58,5 +59,31 @@ public class BookingService {
 
             catalogFacade.releaseShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
         }
+    }
+
+    @Transactional
+    public void cancelHold(UUID holdId, UUID userId) {
+        Hold hold = holdRepository.findAndLockById(holdId).orElseThrow(HoldNotFoundException::new);
+
+        if (!hold.getUserId().equals(userId)) {
+            throw new ForbiddenActionException("You do not have permission to cancel this hold.");
+        }
+
+        if (hold.getStatus() == Hold.HoldStatus.CANCELLED) {
+            return;
+        }
+
+        if (hold.getStatus() == Hold.HoldStatus.CONFIRMED) {
+            throw new HoldAlreadyConfirmedException();
+        }
+
+        if (hold.getStatus() == Hold.HoldStatus.EXPIRED) {
+            throw new HoldExpiredException();
+        }
+
+        hold.setStatus(Hold.HoldStatus.CANCELLED);
+
+        List<UUID> showtimeSeatIds = hold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList();
+        catalogFacade.releaseShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
     }
 }
