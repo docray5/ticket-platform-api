@@ -13,22 +13,22 @@ public class RabbitMqConfig {
     private final BookingProperties bookingProperties;
 
     @Bean
-    public Queue queue() {
+    public Queue holdExpiryQueue() {
         return new Queue(bookingProperties.rabbitMq().queueName(), true);
     }
 
     @Bean
-    public DirectExchange exchange() {
+    public DirectExchange holdExpiryExchange() {
         return new DirectExchange(bookingProperties.rabbitMq().exchangeName());
     }
 
     @Bean
-    public Binding binding() {
-        return BindingBuilder.bind(queue()).to(exchange()).with(bookingProperties.rabbitMq().routingKey());
+    public Binding holdExpiryBinding() {
+        return BindingBuilder.bind(holdExpiryQueue()).to(holdExpiryExchange()).with(bookingProperties.rabbitMq().routingKey());
     }
 
     @Bean
-    public Queue delayQueue() {
+    public Queue holdExpiryDelayQueue() {
         return QueueBuilder
                 .durable(bookingProperties.rabbitMq().delayQueueName())
                 .deadLetterExchange(bookingProperties.rabbitMq().exchangeName())

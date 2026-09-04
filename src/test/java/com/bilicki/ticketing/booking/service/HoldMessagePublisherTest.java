@@ -4,7 +4,6 @@ import com.bilicki.ticketing.config.BookingProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -18,19 +17,18 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 @ExtendWith(MockitoExtension.class)
 class HoldMessagePublisherTest {
 
-    private static final String DELAY_QUEUE_NAME = "hold.expiry.delay.queue-test";
+    private static final String DELAY_QUEUE_NAME = "hold.expiry.delay.queue";
 
     @Mock
     private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
     private HoldMessagePublisher holdMessagePublisher;
 
     @BeforeEach
     void setUp() {
         BookingProperties properties = new BookingProperties(
                 new BookingProperties.Hold(Duration.ofMinutes(5)),
-                new BookingProperties.RabbitMq("queue-test", DELAY_QUEUE_NAME, "exchange-test", "key-test")
+                new BookingProperties.RabbitMq("queue", DELAY_QUEUE_NAME, "exchange-test", "key-test")
         );
         holdMessagePublisher = new HoldMessagePublisher(rabbitTemplate, properties);
     }

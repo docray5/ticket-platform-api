@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.booking;
 
+import com.bilicki.ticketing.booking.internal.BookingMapper;
 import com.bilicki.ticketing.booking.internal.Hold;
 import com.bilicki.ticketing.booking.internal.HoldRepository;
 import com.bilicki.ticketing.booking.service.BookingService;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -41,6 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ActiveProfiles("fast-expiry")
 @SpringBootTest
@@ -73,6 +77,9 @@ class HoldExpiryIntegrationTest {
     private MovieRepository movieRepository;
     @Autowired
     private SeatTypeRepository seatTypeRepository;
+
+    @MockitoSpyBean
+    private BookingMapper bookingMapper;
 
     private Showtime showtime;
     private ShowtimeSeat showtimeSeatA;
@@ -146,19 +153,19 @@ class HoldExpiryIntegrationTest {
     }
 
     @Test
-    void shouldNotPublishExpiryMessage_WhenCreateHoldTransactionRollsBack() {
-        showtimeSeatA.setStatus(ShowtimeSeat.SeatStatus.HELD);
-        showtimeSeatRepository.save(showtimeSeatA);
-        User savedUser = userRepository.save(new User("email", "pass"));
+    void shouldNotPublishExpiryMessage_WhenTransactionRollsBackAfterPublish() {
+        User savedUser = userRepository.save(new User("email2", "pass2"));
         List<UUID> seatIds = List.of(showtimeSeatA.getId());
 
+        doThrow(new RuntimeException("Simulated late failure")).when(bookingMapper).toHoldResponse(any());
+
         assertThatThrownBy(() -> bookingService.createHold(showtime.getId(), savedUser.getId(), new HoldRequest(seatIds)))
-                .isInstanceOf(SeatUnavailableException.class);
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Simulated late failure");
 
         Object message = rabbitTemplate.receiveAndConvert(bookingProperties.rabbitMq().delayQueueName(), 2000);
         assertThat(message).isNull();
     }
-
 
     @Test
     void shouldIgnoreLateExpiryMessage_WhenHoldIsAlreadyConfirmed() {
@@ -236,5 +243,18 @@ class HoldExpiryIntegrationTest {
             assertThat(cancelSuccessCount.get()).isEqualTo(0);
             assertThat(cancelExceptionCount.get()).isEqualTo(1);
         }
+    }
+
+    @Test
+    void shouldNotCreateHold_WhenSeatIsAlreadyHeld() {
+        User savedUser = userRepository.save(new User("email", "pass"));
+        List<UUID> seatIds = List.of(showtimeSeatA.getId());
+
+        bookingService.createHold(showtime.getId(), savedUser.getId(), new HoldRequest(seatIds));
+
+        rabbitTemplate.receive(bookingProperties.rabbitMq().delayQueueName(), 2000);
+
+        assertThatThrownBy(() -> bookingService.createHold(showtime.getId(), savedUser.getId(), new HoldRequest(seatIds)))
+                .isInstanceOf(SeatUnavailableException.class);
     }
 }
