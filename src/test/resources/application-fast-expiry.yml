@@ -1,0 +1,8 @@
+booking:
+  hold:
+    ttl: 300ms
+  rabbitmq:
+    queue-name: "hold.expiry.queue-test"
+    delay-queue-name: "hold.expiry.delay.queue-test"
+    exchange-name: "hold.expiry.exchange-test"
+    routing-key: "hold.expiry.key-test"

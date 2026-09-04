@@ -4,9 +4,9 @@ import com.bilicki.ticketing.booking.internal.*;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
+import com.bilicki.ticketing.config.BookingProperties;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,9 +25,7 @@ public class BookingService {
     private final CatalogFacade catalogFacade;
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
-
-    @Value("${booking.hold.ttl-minutes}")
-    private long holdTtlMinutes;
+    private final BookingProperties bookingProperties;
 
     @Transactional
     public HoldResponse createHold(UUID showtimeId, UUID userId, HoldRequest request) {
@@ -39,7 +36,7 @@ public class BookingService {
 
         BigDecimal totalPrice = catalogFacade.reserveShowtimeSeats(showtimeId, request.showtimeSeatIds());
 
-        Hold hold = new Hold(showtimeId, userId, totalPrice, Instant.now(clock).plus(holdTtlMinutes, ChronoUnit.MINUTES));
+        Hold hold = new Hold(showtimeId, userId, totalPrice, Instant.now(clock).plus(bookingProperties.hold().ttl()));
 
         request.showtimeSeatIds().forEach(showtimeSeatId -> hold.getSeats().add(new HoldSeat(hold, showtimeSeatId)));
 

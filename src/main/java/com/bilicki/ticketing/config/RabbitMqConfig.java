@@ -1,54 +1,44 @@
 package com.bilicki.ticketing.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@RequiredArgsConstructor
 public class RabbitMqConfig {
-    @Value("${booking.rabbitmq.queue-name}")
-    private String queueName;
-    @Value("${booking.rabbitmq.exchange-name}")
-    private String directExchangeName;
-    @Value("${booking.rabbitmq.key-name}")
-    private String routingKeyName;
-
-    @Value("${booking.rabbitmq.delay-queue-name}")
-    private String delayQueueName;
-
-    @Value("${booking.hold.ttl-minutes}")
-    private Integer ttlMinutes;
+    private final BookingProperties bookingProperties;
 
     @Bean
     public Queue queue() {
-        return new Queue(queueName, true);
+        return new Queue(bookingProperties.rabbitMq().queueName(), true);
     }
 
     @Bean
     public DirectExchange exchange() {
-        return new DirectExchange(directExchangeName);
+        return new DirectExchange(bookingProperties.rabbitMq().exchangeName());
     }
 
     @Bean
     public Binding binding() {
-        return BindingBuilder.bind(queue()).to(exchange()).with(routingKeyName);
+        return BindingBuilder.bind(queue()).to(exchange()).with(bookingProperties.rabbitMq().routingKey());
     }
 
     @Bean
     public Queue delayQueue() {
         return QueueBuilder
-                .durable(delayQueueName)
-                .deadLetterExchange(directExchangeName)
-                .ttl(ttlMinutes * 60 * 1000)
-                .deadLetterRoutingKey(routingKeyName)
+                .durable(bookingProperties.rabbitMq().delayQueueName())
+                .deadLetterExchange(bookingProperties.rabbitMq().exchangeName())
+                .ttl((int) bookingProperties.hold().ttl().toMillis())
+                .deadLetterRoutingKey(bookingProperties.rabbitMq().routingKey())
                 .build();
     }
 
     @Bean
     public MessageConverter messageConverter() {
-        return new JacksonJsonMessageConverter();
+        return new JacksonJsonMessageConverter("com.bilicki.ticketing.booking.service");
     }
 }
