@@ -54,11 +54,11 @@ public class BookingService {
     }
 
     @Transactional
-    public void expireHold(UUID holdId, Hold.HoldStatus status) {
+    public void expireHold(UUID holdId) {
         Hold hold = holdRepository.findAndLockById(holdId).orElseThrow();
 
         if (hold.getStatus() == Hold.HoldStatus.ACTIVE) {
-            hold.setStatus(status);
+            hold.setStatus(Hold.HoldStatus.EXPIRED);
 
             List<UUID> showtimeSeatIds = hold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList();
 
@@ -104,13 +104,15 @@ public class BookingService {
             throw new HoldAlreadyConfirmedException();
         }
 
-        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED)) {
+        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED) || hold.getExpiresAt().isBefore(Instant.now(clock))) {
             throw new HoldExpiredException();
         }
 
         if (hold.getStatus().equals(Hold.HoldStatus.CANCELLED)) {
-            throw new HoldAlreadyCancelled();
+            throw new HoldAlreadyCancelledException();
         }
+
+        paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
         Booking booking = new Booking(hold.getShowtimeId(), userId, hold, hold.getTotalPrice());
 
@@ -122,8 +124,6 @@ public class BookingService {
         bookingRepository.save(booking);
 
         catalogFacade.confirmShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
-
-        paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
         // TODO post a message
 

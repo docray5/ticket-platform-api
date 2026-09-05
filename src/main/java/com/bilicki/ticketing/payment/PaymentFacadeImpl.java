@@ -19,17 +19,19 @@ public class PaymentFacadeImpl implements PaymentFacade {
     @Value("${payment.decline-rate}")
     private float declineRate;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = PaymentDeclinedException.class)
     @Override
     public void pay(UUID holdId, BigDecimal amount) {
-        Payment payment = new Payment(holdId, Payment.PaymentStatus.DECLINED, amount, "mock_"+UUID.randomUUID());
+        boolean declined = ThreadLocalRandom.current().nextFloat() <= declineRate;
 
-        if (ThreadLocalRandom.current().nextFloat() <= declineRate) {
-            paymentRepository.save(payment);
+        Payment payment = new Payment(holdId,
+                declined ? Payment.PaymentStatus.DECLINED : Payment.PaymentStatus.SUCCEEDED,
+                amount, "mock_"+UUID.randomUUID());
+
+        paymentRepository.save(payment);
+
+        if (declined) {
             throw new PaymentDeclinedException();
         }
-
-        payment.setStatus(Payment.PaymentStatus.SUCCEEDED);
-        paymentRepository.save(payment);
     }
 }

@@ -22,7 +22,7 @@ public class HoldMessageListener {
         MDC.put("correlationId", event.correlationId());
 
         try {
-            bookingService.expireHold(event.holdId(), Hold.HoldStatus.EXPIRED);
+            bookingService.expireHold(event.holdId());
         } catch (NoSuchElementException e) {
             log.warn("Hold {} not found during expiry check", event.holdId());
         } catch (Exception e) {
