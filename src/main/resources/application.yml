@@ -50,3 +50,6 @@ booking:
     delay-queue-name: "hold.expiry.delay.queue"
     exchange-name: "hold.expiry.exchange"
     routing-key: "hold.expiry.key"
+
+payment:
+  decline-rate: 0.1

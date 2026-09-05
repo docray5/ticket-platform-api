@@ -1,9 +1,9 @@
 package com.bilicki.ticketing.payment.internal;
 
-import com.bilicki.ticketing.booking.internal.Booking;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,14 +25,22 @@ public class Payment {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Setter
     private PaymentStatus status;
 
     @Column(nullable = false)
     private BigDecimal amount;
 
-    @Column(nullable = false)
+    @Column(name = "provider_reference", nullable = false)
     private String providerReference;
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Payment(UUID holdId, PaymentStatus status, BigDecimal amount, String providerReference) {
+        this.holdId = holdId;
+        this.status = status;
+        this.amount = amount;
+        this.providerReference = providerReference;
+    }
 }
