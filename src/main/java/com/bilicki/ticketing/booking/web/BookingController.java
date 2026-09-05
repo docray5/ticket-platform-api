@@ -20,7 +20,6 @@ public class BookingController {
     @PostMapping(path = "/showtimes/{showtimeId}/holds")
     @ResponseStatus(HttpStatus.CREATED)
     public HoldResponse createHold(@PathVariable UUID showtimeId, @AuthenticationPrincipal String userIdString, @Valid @RequestBody HoldRequest request) {
-        // TODO idempotency check (Later in the Idempotency Filter)
         return bookingService.createHold(showtimeId, UUID.fromString(userIdString), request);
     }
 
