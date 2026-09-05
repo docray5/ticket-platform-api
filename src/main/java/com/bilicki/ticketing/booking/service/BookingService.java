@@ -1,6 +1,7 @@
 package com.bilicki.ticketing.booking.service;
 
 import com.bilicki.ticketing.booking.internal.*;
+import com.bilicki.ticketing.booking.web.BookingRequest;
 import com.bilicki.ticketing.booking.web.BookingResponse;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
@@ -92,8 +93,8 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponse confirmHold(UUID holdId, UUID userId, String paymentMethod) {
-        Hold hold = holdRepository.findAndLockById(holdId).orElseThrow(HoldNotFoundException::new);
+    public BookingResponse confirmHold(UUID userId, BookingRequest request) {
+        Hold hold = holdRepository.findAndLockById(request.holdId()).orElseThrow(HoldNotFoundException::new);
 
         if (!hold.getUserId().equals(userId)) {
             throw new ForbiddenActionException("You do not have permission to confirm this hold.");
@@ -122,7 +123,7 @@ public class BookingService {
 
         catalogFacade.confirmShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
 
-        paymentFacade.pay(holdId, hold.getTotalPrice());
+        paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
         // TODO post a message
 

@@ -28,4 +28,10 @@ public class BookingController {
     public void cancelHold(@PathVariable UUID holdId, @AuthenticationPrincipal String userIdString) {
         bookingService.cancelHold(holdId, UUID.fromString(userIdString));
     }
+
+    @PostMapping(path = "/bookings")
+    @ResponseStatus(HttpStatus.CREATED)
+    public BookingResponse confirmHold(@AuthenticationPrincipal String userIdString, @Valid @RequestBody BookingRequest request) {
+        return bookingService.confirmHold(UUID.fromString(userIdString), request);
+    }
 }
