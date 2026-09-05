@@ -1,11 +1,13 @@
 package com.bilicki.ticketing.booking.service;
 
 import com.bilicki.ticketing.booking.internal.*;
+import com.bilicki.ticketing.booking.web.BookingResponse;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import com.bilicki.ticketing.common.ForbiddenActionException;
 import com.bilicki.ticketing.config.BookingProperties;
+import com.bilicki.ticketing.payment.PaymentFacade;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,6 +29,8 @@ public class BookingService {
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
     private final BookingProperties bookingProperties;
+    private final PaymentFacade paymentFacade;
+    private final BookingRepository bookingRepository;
 
     @Transactional
     public HoldResponse createHold(UUID showtimeId, UUID userId, HoldRequest request) {
@@ -85,5 +89,43 @@ public class BookingService {
 
         List<UUID> showtimeSeatIds = hold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList();
         catalogFacade.releaseShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
+    }
+
+    @Transactional
+    public BookingResponse confirmHold(UUID holdId, UUID userId, String paymentMethod) {
+        Hold hold = holdRepository.findAndLockById(holdId).orElseThrow(HoldNotFoundException::new);
+
+        if (!hold.getUserId().equals(userId)) {
+            throw new ForbiddenActionException("You do not have permission to confirm this hold.");
+        }
+
+        if (hold.getStatus().equals(Hold.HoldStatus.CONFIRMED)) {
+            throw new HoldAlreadyConfirmedException();
+        }
+
+        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED)) {
+            throw new HoldExpiredException();
+        }
+
+        if (hold.getStatus().equals(Hold.HoldStatus.CANCELLED)) {
+            throw new HoldAlreadyCancelled();
+        }
+
+        Booking booking = new Booking(hold.getShowtimeId(), userId, hold, hold.getTotalPrice());
+
+        hold.setStatus(Hold.HoldStatus.CONFIRMED);
+        List<UUID> showtimeSeatIds = hold.getSeats().stream().map(HoldSeat::getShowtimeSeatId).toList();
+
+        showtimeSeatIds.forEach(s -> booking.getBookingSeats().add(new BookingSeat(booking, s)));
+
+        bookingRepository.save(booking);
+
+        catalogFacade.confirmShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
+
+        paymentFacade.pay(holdId, hold.getTotalPrice());
+
+        // TODO post a message
+
+        return bookingMapper.toBookingResponse(booking);
     }
 }
