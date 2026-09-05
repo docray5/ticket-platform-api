@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @NoArgsConstructor
@@ -38,9 +40,19 @@ public class Booking {
     @Column(nullable = false, name = "total_price")
     private BigDecimal totalPrice;
 
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    private List<BookingSeat> bookingSeats = new ArrayList<>();
+
     @Column(name = "confirmed_at", updatable = false, nullable = false)
     private Instant confirmedAt = Instant.now();
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    public Booking(UUID showtimeId, UUID userId, Hold hold, BigDecimal totalPrice) {
+        this.showtimeId = showtimeId;
+        this.userId = userId;
+        this.hold = hold;
+        this.totalPrice = totalPrice;
+    }
 }
