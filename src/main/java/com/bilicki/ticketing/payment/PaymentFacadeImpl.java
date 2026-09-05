@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class PaymentFacadeImpl implements PaymentFacade {
     private final PaymentRepository paymentRepository;
-    @Value("${payment.decline-rate}$")
+    @Value("${payment.decline-rate}")
     private float declineRate;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
