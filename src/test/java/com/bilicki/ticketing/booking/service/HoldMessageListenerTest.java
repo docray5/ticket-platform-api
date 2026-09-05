@@ -31,7 +31,7 @@ public class HoldMessageListenerTest {
 
         listener.handleHoldExpiry(event);
 
-        verify(bookingService).transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+        verify(bookingService).expireHold(holdId, Hold.HoldStatus.EXPIRED);
         assertThat(MDC.get("correlationId")).isNull();
     }
 
@@ -43,11 +43,11 @@ public class HoldMessageListenerTest {
         doAnswer(invocation -> {
             assertThat(MDC.get("correlationId")).isEqualTo("corr-456");
             return null;
-        }).when(bookingService).transitionHoldStatusFromActiveTo(any(), any());
+        }).when(bookingService).expireHold(any(), any());
 
         listener.handleHoldExpiry(event);
 
-        verify(bookingService).transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+        verify(bookingService).expireHold(holdId, Hold.HoldStatus.EXPIRED);
     }
 
     @Test
@@ -56,7 +56,7 @@ public class HoldMessageListenerTest {
         HoldExpiryMessage event = new HoldExpiryMessage(holdId, "corr-789");
 
         doThrow(new NoSuchElementException()).when(bookingService)
-                .transitionHoldStatusFromActiveTo(any(), any());
+                .expireHold(any(), any());
 
         assertThatCode(() -> listener.handleHoldExpiry(event)).doesNotThrowAnyException();
         assertThat(MDC.get("correlationId")).isNull();
@@ -68,7 +68,7 @@ public class HoldMessageListenerTest {
         HoldExpiryMessage event = new HoldExpiryMessage(holdId, "corr-999");
 
         doThrow(new RuntimeException("db is down")).when(bookingService)
-                .transitionHoldStatusFromActiveTo(any(), any());
+                .expireHold(any(), any());
 
         assertThrows(RuntimeException.class, () -> listener.handleHoldExpiry(event));
         assertThat(MDC.get("correlationId")).isNull();

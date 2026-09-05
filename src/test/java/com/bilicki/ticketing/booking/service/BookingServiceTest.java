@@ -171,7 +171,7 @@ public class BookingServiceTest {
     }
 
     @Test
-    void transitionHoldStatusFromActiveTo_ReleasesSeatsAndUpdatesStatus_WhenHoldIsActive() {
+    void expireHoldStatusFromActiveTo_ReleasesSeatsAndUpdatesStatus_WhenHoldIsActive() {
         UUID holdId = UUID.randomUUID();
         UUID showtimeId = UUID.randomUUID();
         UUID seatAId = UUID.randomUUID();
@@ -183,14 +183,14 @@ public class BookingServiceTest {
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
 
         assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.EXPIRED);
         verify(catalogFacade).releaseShowtimeSeats(showtimeId, List.of(seatAId, seatBId));
     }
 
     @Test
-    void transitionHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyConfirmed() {
+    void expireHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyConfirmed() {
         UUID holdId = UUID.randomUUID();
 
         Hold hold = new Hold(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, Instant.now());
@@ -198,14 +198,14 @@ public class BookingServiceTest {
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
 
         assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.CONFIRMED);
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 
     @Test
-    void transitionHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyExpired() {
+    void expireHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyExpired() {
         UUID holdId = UUID.randomUUID();
 
         Hold hold = new Hold(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, Instant.now());
@@ -213,18 +213,18 @@ public class BookingServiceTest {
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
 
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 
     @Test
-    void transitionHoldStatusFromActiveTo_ThrowsNoSuchElementException_WhenHoldNotFound() {
+    void expireHoldStatusFromActiveTo_ThrowsNoSuchElementException_WhenHoldNotFound() {
         UUID holdId = UUID.randomUUID();
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () ->
-                bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED));
+                bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED));
 
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }

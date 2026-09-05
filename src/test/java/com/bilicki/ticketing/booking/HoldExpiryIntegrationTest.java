@@ -218,7 +218,7 @@ class HoldExpiryIntegrationTest {
         executor.submit(() -> {
             try {
                 startLatch.await();
-                bookingService.transitionHoldStatusFromActiveTo(holdId, Hold.HoldStatus.EXPIRED);
+                bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
             } catch (Exception ignored) {
             } finally {
                 doneLatch.countDown();

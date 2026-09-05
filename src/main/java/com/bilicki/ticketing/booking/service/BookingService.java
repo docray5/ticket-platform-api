@@ -54,7 +54,7 @@ public class BookingService {
     }
 
     @Transactional
-    public void transitionHoldStatusFromActiveTo(UUID holdId, Hold.HoldStatus status) {
+    public void expireHold(UUID holdId, Hold.HoldStatus status) {
         Hold hold = holdRepository.findAndLockById(holdId).orElseThrow();
 
         if (hold.getStatus() == Hold.HoldStatus.ACTIVE) {
