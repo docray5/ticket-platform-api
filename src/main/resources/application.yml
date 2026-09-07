@@ -46,10 +46,15 @@ booking:
   hold:
     ttl: 5m
   rabbit-mq:
-    queue-name: "hold.expiry.queue"
-    delay-queue-name: "hold.expiry.delay.queue"
-    exchange-name: "hold.expiry.exchange"
-    routing-key: "hold.expiry.key"
+    expiry:
+      queue-name: "hold.expiry.queue"
+      delay-queue-name: "hold.expiry.delay.queue"
+      exchange-name: "hold.expiry.exchange"
+      routing-key: "hold.expiry.key"
+    confirm:
+      queue-name: "hold.confirm.queue"
+      exchange-name: "hold.confirm.exchange"
+      routing-key: "hold.confirm.key"
 
 payment:
   decline-rate: 0.1

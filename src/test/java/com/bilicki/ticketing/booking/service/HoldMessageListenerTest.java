@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.booking.service;
 
+import com.bilicki.ticketing.notification.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,6 +21,8 @@ import static org.mockito.Mockito.*;
 public class HoldMessageListenerTest {
     @Mock
     private BookingService bookingService;
+    @Mock
+    private NotificationService notificationService;
     @InjectMocks
     private HoldMessageListener listener;
 
@@ -70,6 +73,17 @@ public class HoldMessageListenerTest {
                 .expireHold(any());
 
         assertThrows(RuntimeException.class, () -> listener.handleHoldExpiry(event));
+        assertThat(MDC.get("correlationId")).isNull();
+    }
+
+    @Test
+    void shouldClearMdc_AfterHandlingHoldConfirm() {
+        UUID holdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        HoldConfirmMessage event = new HoldConfirmMessage(holdId, userId, "corr-confirm");
+
+        assertThatCode(() -> listener.handleHoldConfirm(event)).doesNotThrowAnyException();
+
         assertThat(MDC.get("correlationId")).isNull();
     }
 }

@@ -5,6 +5,7 @@ import com.bilicki.ticketing.booking.internal.BookingRepository;
 import com.bilicki.ticketing.booking.internal.Hold;
 import com.bilicki.ticketing.booking.internal.HoldRepository;
 import com.bilicki.ticketing.booking.service.BookingService;
+import com.bilicki.ticketing.booking.service.HoldConfirmMessage;
 import com.bilicki.ticketing.booking.service.HoldExpiredException;
 import com.bilicki.ticketing.booking.service.HoldExpiryMessage;
 import com.bilicki.ticketing.booking.web.BookingRequest;
@@ -13,6 +14,7 @@ import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.SeatUnavailableException;
 import com.bilicki.ticketing.catalog.internal.*;
 import com.bilicki.ticketing.config.BookingProperties;
+import com.bilicki.ticketing.notification.NotificationService;
 import com.bilicki.ticketing.payment.PaymentFacade;
 import com.bilicki.ticketing.payment.internal.Payment;
 import com.bilicki.ticketing.payment.internal.PaymentRepository;
@@ -89,6 +91,8 @@ class HoldLifeCycleIntegrationTest {
 
     @MockitoSpyBean
     private BookingMapper bookingMapper;
+    @MockitoSpyBean
+    private NotificationService notificationService;
 
     private Showtime showtime;
     private ShowtimeSeat showtimeSeatA;
@@ -126,9 +130,9 @@ class HoldLifeCycleIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        reset(bookingMapper, paymentFacade);
-        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().delayQueueName(), false);
-        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().queueName(), false);
+        reset(bookingMapper, paymentFacade, notificationService);
+        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().expiry().delayQueueName(), false);
+        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().expiry().queueName(), false);
 
         bookingRepository.deleteAll();
         paymentRepository.deleteAll();
@@ -154,7 +158,7 @@ class HoldLifeCycleIntegrationTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Simulated late failure");
 
-        Object message = rabbitTemplate.receiveAndConvert(bookingProperties.rabbitMq().delayQueueName(), 2000);
+        Object message = rabbitTemplate.receiveAndConvert(bookingProperties.rabbitMq().expiry().delayQueueName(), 2000);
         assertThat(message).isNull();
     }
 
@@ -168,7 +172,7 @@ class HoldLifeCycleIntegrationTest {
         hold.setStatus(Hold.HoldStatus.CONFIRMED);
         holdRepository.saveAndFlush(hold);
 
-        rabbitTemplate.convertAndSend(bookingProperties.rabbitMq().queueName(), new HoldExpiryMessage(holdResponse.holdId(), "late-corr-id"));
+        rabbitTemplate.convertAndSend(bookingProperties.rabbitMq().expiry().queueName(), new HoldExpiryMessage(holdResponse.holdId(), "late-corr-id"));
 
         await().atMost(Duration.ofSeconds(3)).untilAsserted(() -> {
             Hold reloadedHold = holdRepository.findById(holdResponse.holdId()).orElseThrow();
@@ -321,5 +325,9 @@ class HoldLifeCycleIntegrationTest {
 
         assertThat(paymentRepository.findAll())
                 .anySatisfy(p -> assertThat(p.getStatus()).isEqualTo(Payment.PaymentStatus.SUCCEEDED));
+
+        await().atMost(Duration.ofSeconds(3)).untilAsserted(() ->
+                verify(notificationService).sendBookingConfirmation(holdResponse.holdId(), savedUser.getId())
+        );
     }
 }

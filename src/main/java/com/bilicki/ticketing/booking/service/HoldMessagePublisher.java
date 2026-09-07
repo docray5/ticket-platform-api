@@ -15,6 +15,11 @@ public class HoldMessagePublisher {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void scheduleHoldExpiry(HoldExpiryMessage event) {
-        rabbitTemplate.convertAndSend("", bookingProperties.rabbitMq().delayQueueName(), event);
+        rabbitTemplate.convertAndSend("", bookingProperties.rabbitMq().expiry().delayQueueName(), event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void publishHoldConfirmation(HoldConfirmMessage event) {
+        rabbitTemplate.convertAndSend(bookingProperties.rabbitMq().confirm().exchangeName(), bookingProperties.rabbitMq().confirm().routingKey(), event);
     }
 }

@@ -20,6 +20,7 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -67,8 +68,12 @@ public class BookingServiceTest {
     private final Duration TTL = Duration.ofMinutes(5);
     private final BookingProperties bookingProperties = new BookingProperties(
             new BookingProperties.Hold(TTL),
-            new BookingProperties.RabbitMq("hold.expiry.queue", "hold.expiry.delay.queue",
-                    "hold.expiry.exchange", "hold.expiry.key")
+            new BookingProperties.RabbitMq(
+                    new BookingProperties.RabbitMq.Expiry("hold.expiry.queue", "hold.expiry.delay.queue",
+                    "hold.expiry.exchange", "hold.expiry.key"),
+                    new BookingProperties.RabbitMq.Confirm("hold.confirm.queue",
+                            "hold.confirm.exchange", "hold.confirm.key")
+            )
     );
 
     private UUID userId;
@@ -86,6 +91,7 @@ public class BookingServiceTest {
         request = new BookingRequest(holdId, "MOCK_CARD");
 
         hold = new Hold(showtimeId, userId, new BigDecimal("25.00"), Instant.now().plusSeconds(300));
+        ReflectionTestUtils.setField(hold, "id", holdId);
         hold.getSeats().add(new HoldSeat(hold, UUID.randomUUID()));
 
         lenient().when(clock.instant()).thenReturn(FIXED_TIME);
@@ -305,6 +311,8 @@ public class BookingServiceTest {
 
     @Test
     void shouldSuccessfullyConfirmHold_AndCreateBooking() {
+        MDC.put("correlationId", "corr-123");
+
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
         when(bookingMapper.toBookingResponse(any(Booking.class))).thenReturn(
                 new BookingResponse(UUID.randomUUID(), showtimeId, new BigDecimal("25.00"), "CONFIRMED", List.of())
@@ -333,6 +341,13 @@ public class BookingServiceTest {
         inOrder.verify(bookingRepository).save(any());
         inOrder.verify(catalogFacade).confirmShowtimeSeats(any(), any());
         inOrder.verify(paymentFacade).pay(any(), any());
+
+        ArgumentCaptor<HoldConfirmMessage> confirmCaptor = ArgumentCaptor.forClass(HoldConfirmMessage.class);
+        verify(eventPublisher).publishEvent(confirmCaptor.capture());
+        HoldConfirmMessage publishedConfirm = confirmCaptor.getValue();
+        assertThat(publishedConfirm.holdId()).isEqualTo(holdId);
+        assertThat(publishedConfirm.userId()).isEqualTo(userId);
+        assertThat(publishedConfirm.correlationId()).isNotNull();
     }
 
     @Test

@@ -14,27 +14,42 @@ public class RabbitMqConfig {
 
     @Bean
     public Queue holdExpiryQueue() {
-        return new Queue(bookingProperties.rabbitMq().queueName(), true);
+        return new Queue(bookingProperties.rabbitMq().expiry().queueName(), true);
     }
 
     @Bean
     public DirectExchange holdExpiryExchange() {
-        return new DirectExchange(bookingProperties.rabbitMq().exchangeName());
+        return new DirectExchange(bookingProperties.rabbitMq().expiry().exchangeName());
     }
 
     @Bean
     public Binding holdExpiryBinding() {
-        return BindingBuilder.bind(holdExpiryQueue()).to(holdExpiryExchange()).with(bookingProperties.rabbitMq().routingKey());
+        return BindingBuilder.bind(holdExpiryQueue()).to(holdExpiryExchange()).with(bookingProperties.rabbitMq().expiry().routingKey());
     }
 
     @Bean
     public Queue holdExpiryDelayQueue() {
         return QueueBuilder
-                .durable(bookingProperties.rabbitMq().delayQueueName())
-                .deadLetterExchange(bookingProperties.rabbitMq().exchangeName())
+                .durable(bookingProperties.rabbitMq().expiry().delayQueueName())
+                .deadLetterExchange(bookingProperties.rabbitMq().expiry().exchangeName())
                 .ttl((int) bookingProperties.hold().ttl().toMillis())
-                .deadLetterRoutingKey(bookingProperties.rabbitMq().routingKey())
+                .deadLetterRoutingKey(bookingProperties.rabbitMq().expiry().routingKey())
                 .build();
+    }
+
+    @Bean
+    public Queue holdConfirmQueue() {
+        return new Queue(bookingProperties.rabbitMq().confirm().queueName(), true);
+    }
+
+    @Bean
+    public DirectExchange holdConfirmExchange() {
+        return new DirectExchange(bookingProperties.rabbitMq().confirm().exchangeName());
+    }
+
+    @Bean
+    public Binding holdConfirmBinding() {
+        return BindingBuilder.bind(holdConfirmQueue()).to(holdConfirmExchange()).with(bookingProperties.rabbitMq().confirm().routingKey());
     }
 
     @Bean

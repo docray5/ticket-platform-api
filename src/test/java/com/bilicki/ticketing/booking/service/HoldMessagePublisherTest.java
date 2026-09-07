@@ -28,7 +28,10 @@ class HoldMessagePublisherTest {
     void setUp() {
         BookingProperties properties = new BookingProperties(
                 new BookingProperties.Hold(Duration.ofMinutes(5)),
-                new BookingProperties.RabbitMq("queue", DELAY_QUEUE_NAME, "exchange-test", "key-test")
+                new BookingProperties.RabbitMq(
+                        new BookingProperties.RabbitMq.Expiry("expiry-queue", DELAY_QUEUE_NAME, "expiry-exchange-test", "expiry-key-test"),
+                        new BookingProperties.RabbitMq.Confirm("confirm-queue-test", "confirm-exchange-test", "confirm-key-test")
+                )
         );
         holdMessagePublisher = new HoldMessagePublisher(rabbitTemplate, properties);
     }
@@ -40,6 +43,16 @@ class HoldMessagePublisherTest {
         holdMessagePublisher.scheduleHoldExpiry(event);
 
         verify(rabbitTemplate).convertAndSend("", DELAY_QUEUE_NAME, event);
+        verifyNoMoreInteractions(rabbitTemplate);
+    }
+
+    @Test
+    void shouldPublishConfirmEventToExchange() {
+        HoldConfirmMessage event = new HoldConfirmMessage(UUID.randomUUID(), UUID.randomUUID(), "corr-123");
+
+        holdMessagePublisher.publishHoldConfirmation(event);
+
+        verify(rabbitTemplate).convertAndSend("confirm-exchange-test", "confirm-key-test", event);
         verifyNoMoreInteractions(rabbitTemplate);
     }
 }

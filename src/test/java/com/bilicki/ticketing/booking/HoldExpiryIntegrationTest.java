@@ -99,8 +99,8 @@ public class HoldExpiryIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().delayQueueName(), false);
-        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().queueName(), false);
+        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().expiry().delayQueueName(), false);
+        amqpAdmin.purgeQueue(bookingProperties.rabbitMq().expiry().queueName(), false);
 
         holdRepository.deleteAll();
         showtimeSeatRepository.deleteAll();

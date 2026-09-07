@@ -15,9 +15,20 @@ public record BookingProperties(
     public record Hold(@NotNull Duration ttl) { }
 
     public record RabbitMq(
+            @NotNull @Valid Expiry expiry,
+            @NotNull @Valid Confirm confirm
+    ) {
+        public record Expiry(
             @NotBlank String queueName,
             @NotBlank String delayQueueName,
             @NotBlank String exchangeName,
             @NotBlank String routingKey
-    ) { }
+        ) { }
+
+        public record Confirm(
+                @NotBlank String queueName,
+                @NotBlank String exchangeName,
+                @NotBlank String routingKey
+        ) { }
+    }
 }

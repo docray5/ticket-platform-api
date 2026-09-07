@@ -125,7 +125,7 @@ public class BookingService {
 
         paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
-        // TODO post a message
+        eventPublisher.publishEvent(new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
 
         return bookingMapper.toBookingResponse(booking);
     }
