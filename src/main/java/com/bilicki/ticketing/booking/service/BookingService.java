@@ -74,15 +74,15 @@ public class BookingService {
             throw new ForbiddenActionException("You do not have permission to cancel this hold.");
         }
 
-        if (hold.getStatus() == Hold.HoldStatus.CANCELLED) {
+        if (hold.getStatus().equals(Hold.HoldStatus.CANCELLED)) {
             return;
         }
 
-        if (hold.getStatus() == Hold.HoldStatus.CONFIRMED) {
+        if (hold.getStatus().equals(Hold.HoldStatus.CONFIRMED)) {
             throw new HoldAlreadyConfirmedException();
         }
 
-        if (hold.getStatus() == Hold.HoldStatus.EXPIRED) {
+        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED) || hold.getExpiresAt().isBefore(Instant.now(clock))) {
             throw new HoldExpiredException();
         }
 
@@ -104,15 +104,13 @@ public class BookingService {
             throw new HoldAlreadyConfirmedException();
         }
 
-        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED) || hold.getExpiresAt().isBefore(Instant.now(clock))) {
-            throw new HoldExpiredException();
-        }
-
         if (hold.getStatus().equals(Hold.HoldStatus.CANCELLED)) {
             throw new HoldAlreadyCancelledException();
         }
 
-        paymentFacade.pay(request.holdId(), hold.getTotalPrice());
+        if (hold.getStatus().equals(Hold.HoldStatus.EXPIRED) || hold.getExpiresAt().isBefore(Instant.now(clock))) {
+            throw new HoldExpiredException();
+        }
 
         Booking booking = new Booking(hold.getShowtimeId(), userId, hold, hold.getTotalPrice());
 
@@ -124,6 +122,8 @@ public class BookingService {
         bookingRepository.save(booking);
 
         catalogFacade.confirmShowtimeSeats(hold.getShowtimeId(), showtimeSeatIds);
+
+        paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
         // TODO post a message
 

@@ -1,6 +1,5 @@
 package com.bilicki.ticketing.booking.service;
 
-import com.bilicki.ticketing.booking.internal.Hold;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,7 +30,7 @@ public class HoldMessageListenerTest {
 
         listener.handleHoldExpiry(event);
 
-        verify(bookingService).expireHold(holdId, Hold.HoldStatus.EXPIRED);
+        verify(bookingService).expireHold(holdId);
         assertThat(MDC.get("correlationId")).isNull();
     }
 
@@ -43,11 +42,11 @@ public class HoldMessageListenerTest {
         doAnswer(invocation -> {
             assertThat(MDC.get("correlationId")).isEqualTo("corr-456");
             return null;
-        }).when(bookingService).expireHold(any(), any());
+        }).when(bookingService).expireHold(any());
 
         listener.handleHoldExpiry(event);
 
-        verify(bookingService).expireHold(holdId, Hold.HoldStatus.EXPIRED);
+        verify(bookingService).expireHold(holdId);
     }
 
     @Test
@@ -56,7 +55,7 @@ public class HoldMessageListenerTest {
         HoldExpiryMessage event = new HoldExpiryMessage(holdId, "corr-789");
 
         doThrow(new NoSuchElementException()).when(bookingService)
-                .expireHold(any(), any());
+                .expireHold(any());
 
         assertThatCode(() -> listener.handleHoldExpiry(event)).doesNotThrowAnyException();
         assertThat(MDC.get("correlationId")).isNull();
@@ -68,7 +67,7 @@ public class HoldMessageListenerTest {
         HoldExpiryMessage event = new HoldExpiryMessage(holdId, "corr-999");
 
         doThrow(new RuntimeException("db is down")).when(bookingService)
-                .expireHold(any(), any());
+                .expireHold(any());
 
         assertThrows(RuntimeException.class, () -> listener.handleHoldExpiry(event));
         assertThat(MDC.get("correlationId")).isNull();

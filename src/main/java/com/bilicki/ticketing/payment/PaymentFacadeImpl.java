@@ -22,7 +22,7 @@ public class PaymentFacadeImpl implements PaymentFacade {
     @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = PaymentDeclinedException.class)
     @Override
     public void pay(UUID holdId, BigDecimal amount) {
-        boolean declined = ThreadLocalRandom.current().nextFloat() <= declineRate;
+        boolean declined = ThreadLocalRandom.current().nextFloat() < declineRate;
 
         Payment payment = new Payment(holdId,
                 declined ? Payment.PaymentStatus.DECLINED : Payment.PaymentStatus.SUCCEEDED,

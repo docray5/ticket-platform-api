@@ -1,15 +1,16 @@
 package com.bilicki.ticketing.booking.service;
 
-import com.bilicki.ticketing.booking.internal.BookingMapper;
-import com.bilicki.ticketing.booking.internal.Hold;
-import com.bilicki.ticketing.booking.internal.HoldRepository;
-import com.bilicki.ticketing.booking.internal.HoldSeat;
+import com.bilicki.ticketing.booking.internal.*;
+import com.bilicki.ticketing.booking.web.BookingRequest;
+import com.bilicki.ticketing.booking.web.BookingResponse;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import com.bilicki.ticketing.catalog.SeatUnavailableException;
 import com.bilicki.ticketing.common.ForbiddenActionException;
 import com.bilicki.ticketing.config.BookingProperties;
+import com.bilicki.ticketing.payment.PaymentDeclinedException;
+import com.bilicki.ticketing.payment.PaymentFacade;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +55,10 @@ public class BookingServiceTest {
     private ArgumentCaptor<Hold> holdCaptor;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private PaymentFacade paymentFacade;
+    @Mock
+    private BookingRepository bookingRepository;
 
     @Captor
     private ArgumentCaptor<HoldExpiryMessage> eventCaptor;
@@ -65,9 +71,24 @@ public class BookingServiceTest {
                     "hold.expiry.exchange", "hold.expiry.key")
     );
 
+    private UUID userId;
+    private UUID holdId;
+    private UUID showtimeId;
+    private Hold hold;
+    private BookingRequest request;
+
     @BeforeEach
     void setUp() {
-        bookingService = new BookingService(holdRepository, bookingMapper, catalogFacade, clock, eventPublisher, bookingProperties);
+        bookingService = new BookingService(holdRepository, bookingMapper, catalogFacade, clock, eventPublisher, bookingProperties, paymentFacade, bookingRepository);
+        userId = UUID.randomUUID();
+        holdId = UUID.randomUUID();
+        showtimeId = UUID.randomUUID();
+        request = new BookingRequest(holdId, "MOCK_CARD");
+
+        hold = new Hold(showtimeId, userId, new BigDecimal("25.00"), Instant.now().plusSeconds(300));
+        hold.getSeats().add(new HoldSeat(hold, UUID.randomUUID()));
+
+        lenient().when(clock.instant()).thenReturn(FIXED_TIME);
     }
 
     @AfterEach
@@ -77,8 +98,6 @@ public class BookingServiceTest {
 
     @Test
     public void createHold_Success() {
-        UUID showtimeId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
         UUID showtimeSeatAId = UUID.randomUUID();
         UUID showtimeSeatBId = UUID.randomUUID();
         BigDecimal expectedPrice = new BigDecimal("25.00");
@@ -87,7 +106,6 @@ public class BookingServiceTest {
 
         List<UUID> showtimeSeatIds = List.of(showtimeSeatAId, showtimeSeatBId);
 
-        when(clock.instant()).thenReturn(FIXED_TIME);
         when(catalogFacade.reserveShowtimeSeats(showtimeId, showtimeSeatIds)).thenReturn(expectedPrice);
         when(holdRepository.save(any(Hold.class))).then(returnsFirstArg());
 
@@ -121,8 +139,6 @@ public class BookingServiceTest {
 
     @Test
     void createHold_ThrowsSeatUnavailableException_WhenFacadeFails() {
-        UUID showtimeId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
         List<UUID> seatIds = List.of(UUID.randomUUID());
         HoldRequest request = new HoldRequest(seatIds);
 
@@ -139,8 +155,6 @@ public class BookingServiceTest {
 
     @Test
     void createHold_ThrowsDuplicateSeatException_WhenRequestContainsDuplicates() {
-        UUID showtimeId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
         UUID duplicateSeatId = UUID.randomUUID();
 
         HoldRequest request = new HoldRequest(List.of(duplicateSeatId, duplicateSeatId));
@@ -156,11 +170,8 @@ public class BookingServiceTest {
 
     @Test
     void createHold_PublishesEventWithNullCorrelationId_WhenMdcIsEmpty() {
-        UUID showtimeId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
         List<UUID> showtimeSeatIds = List.of(UUID.randomUUID());
 
-        when(clock.instant()).thenReturn(FIXED_TIME);
         when(catalogFacade.reserveShowtimeSeats(showtimeId, showtimeSeatIds)).thenReturn(BigDecimal.TEN);
         when(holdRepository.save(any(Hold.class))).then(returnsFirstArg());
 
@@ -171,9 +182,7 @@ public class BookingServiceTest {
     }
 
     @Test
-    void expireHoldStatusFromActiveTo_ReleasesSeatsAndUpdatesStatus_WhenHoldIsActive() {
-        UUID holdId = UUID.randomUUID();
-        UUID showtimeId = UUID.randomUUID();
+    void expireHold_ReleasesSeatsAndUpdatesStatus_WhenHoldIsActive() {
         UUID seatAId = UUID.randomUUID();
         UUID seatBId = UUID.randomUUID();
 
@@ -183,57 +192,50 @@ public class BookingServiceTest {
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId);
 
         assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.EXPIRED);
         verify(catalogFacade).releaseShowtimeSeats(showtimeId, List.of(seatAId, seatBId));
     }
 
     @Test
-    void expireHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyConfirmed() {
-        UUID holdId = UUID.randomUUID();
-
+    void expireHold_DoesNothing_WhenHoldIsAlreadyConfirmed() {
         Hold hold = new Hold(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, Instant.now());
         hold.setStatus(Hold.HoldStatus.CONFIRMED);
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId);
 
         assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.CONFIRMED);
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 
     @Test
-    void expireHoldStatusFromActiveTo_DoesNothing_WhenHoldIsAlreadyExpired() {
-        UUID holdId = UUID.randomUUID();
+    void expireHold_DoesNothing_WhenHoldIsAlreadyExpired() {
 
         Hold hold = new Hold(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, Instant.now());
         hold.setStatus(Hold.HoldStatus.EXPIRED);
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
 
-        bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED);
+        bookingService.expireHold(holdId);
 
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 
     @Test
-    void expireHoldStatusFromActiveTo_ThrowsNoSuchElementException_WhenHoldNotFound() {
-        UUID holdId = UUID.randomUUID();
+    void expireHold_ThrowsNoSuchElementException_WhenHoldNotFound() {
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class, () ->
-                bookingService.expireHold(holdId, Hold.HoldStatus.EXPIRED));
+                bookingService.expireHold(holdId));
 
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
     }
 
     @Test
     void cancelHold_Success() {
-        UUID holdId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-        UUID showtimeId = UUID.randomUUID();
         UUID seatId = UUID.randomUUID();
 
         Hold hold = new Hold(showtimeId, userId, BigDecimal.TEN, Instant.now());
@@ -249,8 +251,6 @@ public class BookingServiceTest {
 
     @Test
     void cancelHold_Idempotent_WhenAlreadyCancelled() {
-        UUID holdId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
 
         Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
         hold.setStatus(Hold.HoldStatus.CANCELLED);
@@ -264,7 +264,6 @@ public class BookingServiceTest {
 
     @Test
     void cancelHold_ThrowsForbidden_WhenUserMismatch() {
-        UUID holdId = UUID.randomUUID();
         UUID ownerId = UUID.randomUUID();
         UUID hackerId = UUID.randomUUID();
 
@@ -280,9 +279,6 @@ public class BookingServiceTest {
 
     @Test
     void cancelHold_ThrowsHoldExpired_WhenHoldIsExpired() {
-        UUID holdId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
         Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
         hold.setStatus(Hold.HoldStatus.EXPIRED);
 
@@ -296,9 +292,6 @@ public class BookingServiceTest {
 
     @Test
     void cancelHold_ThrowsHoldAlreadyConfirmed_WhenHoldIsConfirmed() {
-        UUID holdId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
         Hold hold = new Hold(UUID.randomUUID(), userId, BigDecimal.TEN, Instant.now());
         hold.setStatus(Hold.HoldStatus.CONFIRMED);
 
@@ -308,5 +301,125 @@ public class BookingServiceTest {
                 bookingService.cancelHold(holdId, userId)
         );
         verify(catalogFacade, never()).releaseShowtimeSeats(any(), any());
+    }
+
+    @Test
+    void shouldSuccessfullyConfirmHold_AndCreateBooking() {
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+        when(bookingMapper.toBookingResponse(any(Booking.class))).thenReturn(
+                new BookingResponse(UUID.randomUUID(), showtimeId, new BigDecimal("25.00"), "CONFIRMED", List.of())
+        );
+
+        BookingResponse response = bookingService.confirmHold(userId, request);
+
+        assertThat(response).isNotNull();
+        assertThat(hold.getStatus()).isEqualTo(Hold.HoldStatus.CONFIRMED);
+
+        verify(paymentFacade).pay(holdId, new BigDecimal("25.00"));
+
+        verify(catalogFacade).confirmShowtimeSeats(eq(showtimeId), anyList());
+
+        ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+        verify(bookingRepository).save(bookingCaptor.capture());
+        Booking savedBooking = bookingCaptor.getValue();
+
+        assertThat(savedBooking.getUserId()).isEqualTo(userId);
+        assertThat(savedBooking.getTotalPrice()).isEqualTo(new BigDecimal("25.00"));
+        assertThat(savedBooking.getBookingSeats()).hasSize(1);
+        assertThat(savedBooking.getBookingSeats().getFirst().getShowtimeSeatId())
+                .isEqualTo(hold.getSeats().getFirst().getShowtimeSeatId());
+
+        InOrder inOrder = inOrder(bookingRepository, catalogFacade, paymentFacade);
+        inOrder.verify(bookingRepository).save(any());
+        inOrder.verify(catalogFacade).confirmShowtimeSeats(any(), any());
+        inOrder.verify(paymentFacade).pay(any(), any());
+    }
+
+    @Test
+    void shouldThrowForbidden_WhenUserDoesNotOwnHold() {
+        UUID wrongUserId = UUID.randomUUID();
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(wrongUserId, request))
+                .isInstanceOf(ForbiddenActionException.class)
+                .hasMessageContaining("permission");
+
+        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, eventPublisher);
+    }
+
+    @Test
+    void shouldThrowHoldExpired_WhenHoldIsAlreadyExpired() {
+        hold.setStatus(Hold.HoldStatus.EXPIRED);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldExpiredException.class);
+
+        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, eventPublisher);
+    }
+
+    @Test
+    void shouldPropagateException_WhenPaymentDeclines() {
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+        doThrow(new PaymentDeclinedException()).when(paymentFacade).pay(any(), any());
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(PaymentDeclinedException.class);
+    }
+
+    @Test
+    void cancelHold_ThrowsHoldNotFoundException_WhenHoldNotFound() {
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.cancelHold(holdId, userId))
+                .isInstanceOf(HoldNotFoundException.class);
+    }
+
+    @Test
+    void confirmHold_ThrowsHoldNotFoundException_WhenHoldNotFound() {
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldNotFoundException.class);
+    }
+
+    @Test
+    void confirmHold_ThrowsHoldAlreadyConfirmed_WhenAlreadyConfirmed() {
+        hold.setStatus(Hold.HoldStatus.CONFIRMED);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldAlreadyConfirmedException.class);
+    }
+
+    @Test
+    void confirmHold_ThrowsHoldAlreadyCancelled_WhenAlreadyCancelled() {
+        hold.setStatus(Hold.HoldStatus.CANCELLED);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldAlreadyCancelledException.class);
+    }
+
+    @Test
+    void confirmHold_ThrowsHoldExpired_WhenExpiresAtHasPassed_EvenIfStatusStillActive() {
+        Hold staleHold = new Hold(showtimeId, userId, new BigDecimal("25.00"), FIXED_TIME.minusSeconds(5));
+        when(clock.instant()).thenReturn(FIXED_TIME);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(staleHold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldExpiredException.class);
+
+        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository);
+    }
+
+    @Test
+    void confirmHold_ThrowsHoldAlreadyCancelled_NotExpired_WhenCancelledHoldsOriginalExpiryHasPassed() {
+        Hold staleCancelledHold = new Hold(showtimeId, userId, new BigDecimal("25.00"), FIXED_TIME.minusSeconds(5));
+        staleCancelledHold.setStatus(Hold.HoldStatus.CANCELLED);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(staleCancelledHold));
+
+        assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
+                .isInstanceOf(HoldAlreadyCancelledException.class);
     }
 }
