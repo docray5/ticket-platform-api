@@ -1,6 +1,6 @@
 package com.bilicki.ticketing.booking.service;
 
-import com.bilicki.ticketing.notification.NotificationService;
+import com.bilicki.ticketing.notification.NotificationFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -15,7 +15,7 @@ import java.util.NoSuchElementException;
 @RequiredArgsConstructor
 public class HoldMessageListener {
     private final BookingService bookingService;
-    private final NotificationService notificationService;
+    private final NotificationFacade notificationFacade;
 
     @RabbitListener(queues = "${booking.rabbit-mq.expiry.queue-name}")
     @Transactional
@@ -35,11 +35,13 @@ public class HoldMessageListener {
     }
 
     @RabbitListener(queues = "${booking.rabbit-mq.confirm.queue-name}")
-    @Transactional
     public void handleHoldConfirm(HoldConfirmMessage event) {
         MDC.put("correlationId", event.correlationId());
         try {
-            notificationService.sendBookingConfirmation(event.holdId(), event.userId());
+            notificationFacade.sendBookingConfirmation(event.holdId(), event.userId());
+        } catch (Exception e) {
+            log.error("Failed to process confirmation notification for hold {}", event.holdId(), e);
+            throw e;
         } finally {
             MDC.remove("correlationId");
         }

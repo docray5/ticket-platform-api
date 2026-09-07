@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class NotificationServiceImpl implements NotificationService {
+public class NotificationFacadeImpl implements NotificationFacade {
     @Override
     public void sendBookingConfirmation(UUID holdId, UUID userId) {
         log.info("Send email confirmation for hold {} confirmed by user {}", holdId, userId);

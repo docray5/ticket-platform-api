@@ -347,7 +347,7 @@ public class BookingServiceTest {
         HoldConfirmMessage publishedConfirm = confirmCaptor.getValue();
         assertThat(publishedConfirm.holdId()).isEqualTo(holdId);
         assertThat(publishedConfirm.userId()).isEqualTo(userId);
-        assertThat(publishedConfirm.correlationId()).isNotNull();
+        assertThat(publishedConfirm.correlationId()).isEqualTo("corr-123");
     }
 
     @Test
@@ -436,5 +436,17 @@ public class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
                 .isInstanceOf(HoldAlreadyCancelledException.class);
+    }
+
+    @Test
+    void cancelHold_ThrowsHoldExpired_WhenExpiresAtHasPassed_EvenIfStatusStillActive() {
+        Hold staleHold = new Hold(showtimeId, userId, new BigDecimal("25.00"), FIXED_TIME.minusSeconds(5));
+        when(clock.instant()).thenReturn(FIXED_TIME);
+        when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(staleHold));
+
+        assertThatThrownBy(() -> bookingService.cancelHold(holdId, userId))
+                .isInstanceOf(HoldExpiredException.class);
+
+        verifyNoInteractions(catalogFacade);
     }
 }

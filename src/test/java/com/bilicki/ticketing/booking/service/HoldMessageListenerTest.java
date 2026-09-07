@@ -1,6 +1,6 @@
 package com.bilicki.ticketing.booking.service;
 
-import com.bilicki.ticketing.notification.NotificationService;
+import com.bilicki.ticketing.notification.NotificationFacade;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,7 +22,7 @@ public class HoldMessageListenerTest {
     @Mock
     private BookingService bookingService;
     @Mock
-    private NotificationService notificationService;
+    private NotificationFacade notificationFacade;
     @InjectMocks
     private HoldMessageListener listener;
 
@@ -84,6 +84,7 @@ public class HoldMessageListenerTest {
 
         assertThatCode(() -> listener.handleHoldConfirm(event)).doesNotThrowAnyException();
 
+        verify(notificationFacade).sendBookingConfirmation(holdId, userId);
         assertThat(MDC.get("correlationId")).isNull();
     }
 }
