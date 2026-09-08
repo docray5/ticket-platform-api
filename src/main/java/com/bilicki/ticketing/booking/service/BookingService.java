@@ -6,6 +6,7 @@ import com.bilicki.ticketing.booking.web.BookingResponse;
 import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
+import com.bilicki.ticketing.catalog.ShowtimeSeatResponse;
 import com.bilicki.ticketing.common.ForbiddenActionException;
 import com.bilicki.ticketing.config.BookingProperties;
 import com.bilicki.ticketing.payment.PaymentFacade;
@@ -18,8 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -127,6 +131,57 @@ public class BookingService {
 
         eventPublisher.publishEvent(new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
 
-        return bookingMapper.toBookingResponse(booking);
+        return toEnrichedBookingResponse(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getAllBookingsForUser(UUID userId) {
+        List<Booking> bookings = bookingRepository.findAllByUserIdWithSeats(userId);
+        if (bookings.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> allSeatIds = bookings.stream()
+                .flatMap(b -> b.getBookingSeats().stream())
+                .map(BookingSeat::getShowtimeSeatId)
+                .toList();
+
+        Map<UUID, ShowtimeSeatResponse> seatDetailsMap = catalogFacade.getShowtimeSeatsByIds(allSeatIds).stream()
+                .collect(Collectors.toMap(ShowtimeSeatResponse::showtimeSeatId, seat -> seat));
+
+        return bookings.stream()
+                .map(booking -> {
+                    List<ShowtimeSeatResponse> sortedSeats = booking.getBookingSeats().stream()
+                            .map(bs -> seatDetailsMap.get(bs.getShowtimeSeatId()))
+                            .sorted(Comparator.comparing(ShowtimeSeatResponse::row)
+                                    .thenComparing(ShowtimeSeatResponse::number))
+                            .toList();
+
+                    return bookingMapper.toBookingResponse(booking, sortedSeats);
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BookingResponse getBookingForUser(UUID userId, UUID bookingId) {
+        Booking booking = bookingRepository.findByIdWithSeats(bookingId).orElseThrow(BookingNotFoundException::new);
+        if (!booking.getUserId().equals(userId)) {
+            throw new ForbiddenActionException("You do not have permission to view this booking");
+        }
+
+        return toEnrichedBookingResponse(booking);
+    }
+
+    private BookingResponse toEnrichedBookingResponse(Booking booking) {
+        List<UUID> showtimeSeatIds = booking.getBookingSeats().stream()
+                .map(BookingSeat::getShowtimeSeatId)
+                .toList();
+
+        List<ShowtimeSeatResponse> seatDetails = catalogFacade.getShowtimeSeatsByIds(showtimeSeatIds).stream()
+                    .sorted(Comparator.comparing(ShowtimeSeatResponse::row)
+                    .thenComparing(ShowtimeSeatResponse::number))
+                .toList();
+
+        return bookingMapper.toBookingResponse(booking, seatDetails);
     }
 }

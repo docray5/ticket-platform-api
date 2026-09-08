@@ -314,7 +314,7 @@ public class BookingServiceTest {
         MDC.put("correlationId", "corr-123");
 
         when(holdRepository.findAndLockById(holdId)).thenReturn(Optional.of(hold));
-        when(bookingMapper.toBookingResponse(any(Booking.class))).thenReturn(
+        when(bookingMapper.toBookingResponse(any(Booking.class), any())).thenReturn(
                 new BookingResponse(UUID.randomUUID(), showtimeId, new BigDecimal("25.00"), "CONFIRMED", List.of())
         );
 
@@ -448,5 +448,58 @@ public class BookingServiceTest {
                 .isInstanceOf(HoldExpiredException.class);
 
         verifyNoInteractions(catalogFacade);
+    }
+
+    @Test
+    void getBookingForUser_Success() {
+        Booking booking = new Booking(showtimeId, userId, hold, new BigDecimal("25.00"));
+        UUID bookingId = UUID.randomUUID();
+        ReflectionTestUtils.setField(booking, "id", bookingId);
+
+        when(bookingRepository.findByIdWithSeats(bookingId)).thenReturn(Optional.of(booking));
+        when(catalogFacade.getShowtimeSeatsByIds(anyList())).thenReturn(List.of());
+
+
+        BookingResponse response = bookingService.getBookingForUser(userId, bookingId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.bookingId()).isEqualTo(bookingId);
+        assertThat(response.status()).isEqualTo("CONFIRMED");
+    }
+
+    @Test
+    void getBookingForUser_ThrowsNotFound_WhenBookingDoesNotExist() {
+        UUID randomId = UUID.randomUUID();
+        when(bookingRepository.findByIdWithSeats(randomId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> bookingService.getBookingForUser(userId, randomId))
+                .isInstanceOf(BookingNotFoundException.class);
+    }
+
+    @Test
+    void getBookingForUser_ThrowsForbidden_WhenUserDoesNotOwnBooking() {
+        Booking booking = new Booking(showtimeId, userId, hold, new BigDecimal("25.00"));
+        UUID bookingId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+
+        when(bookingRepository.findByIdWithSeats(bookingId)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> bookingService.getBookingForUser(otherUserId, bookingId))
+                .isInstanceOf(ForbiddenActionException.class)
+                .hasMessageContaining("permission");
+    }
+
+    @Test
+    void getAllBookingsForUser_ReturnsMappedList() {
+        Booking booking = new Booking(showtimeId, userId, hold, new BigDecimal("25.00"));
+        when(bookingRepository.findAllByUserIdWithSeats(userId)).thenReturn(List.of(booking));
+        when(catalogFacade.getShowtimeSeatsByIds(anyList())).thenReturn(List.of());
+        when(bookingMapper.toBookingResponse(booking, List.of())).thenReturn(
+                new BookingResponse(UUID.randomUUID(), showtimeId, new BigDecimal("25.00"), "CONFIRMED", List.of())
+        );
+
+        List<BookingResponse> responses = bookingService.getAllBookingsForUser(userId);
+
+        assertThat(responses).hasSize(1);
     }
 }

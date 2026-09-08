@@ -1,4 +1,4 @@
-package com.bilicki.ticketing.catalog.web;
+package com.bilicki.ticketing.catalog;
 
 import java.math.BigDecimal;
 import java.util.UUID;

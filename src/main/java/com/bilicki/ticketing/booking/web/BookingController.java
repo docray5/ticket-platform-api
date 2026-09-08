@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,5 +34,15 @@ public class BookingController {
     @ResponseStatus(HttpStatus.CREATED)
     public BookingResponse confirmHold(@AuthenticationPrincipal String userIdString, @Valid @RequestBody BookingRequest request) {
         return bookingService.confirmHold(UUID.fromString(userIdString), request);
+    }
+
+    @GetMapping(path = "/bookings")
+    public List<BookingResponse> getAllBookings(@AuthenticationPrincipal String userIdString) {
+        return bookingService.getAllBookingsForUser(UUID.fromString(userIdString));
+    }
+
+    @GetMapping(path = "/bookings/{bookingId}")
+    public BookingResponse getBookingById(@PathVariable UUID bookingId, @AuthenticationPrincipal String userIdString) {
+        return bookingService.getBookingForUser(UUID.fromString(userIdString), bookingId);
     }
 }

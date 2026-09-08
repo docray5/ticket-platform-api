@@ -14,4 +14,6 @@ public interface CatalogFacade {
     void releaseShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds);
 
     void confirmShowtimeSeats(UUID showtimeId, List<UUID> showtimeSeatIds);
+
+    List<ShowtimeSeatResponse> getShowtimeSeatsByIds(List<UUID> showtimeSeatIds);
 }

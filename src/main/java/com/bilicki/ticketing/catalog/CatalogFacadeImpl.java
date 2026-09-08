@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.catalog;
 
+import com.bilicki.ticketing.catalog.internal.CatalogMapper;
 import com.bilicki.ticketing.catalog.internal.ShowtimeSeat;
 import com.bilicki.ticketing.catalog.internal.ShowtimeSeatRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CatalogFacadeImpl implements CatalogFacade {
     private final ShowtimeSeatRepository showtimeSeatRepository;
+    private final CatalogMapper catalogMapper;
 
     private void verifyRequestedSeatsExist(List<ShowtimeSeat> seats, List<UUID> requestedShowtimeSeatIds) {
         if (seats.size() != requestedShowtimeSeatIds.size()) {
@@ -79,5 +81,11 @@ public class CatalogFacadeImpl implements CatalogFacade {
 
         for (ShowtimeSeat s : lockedSeats)
             s.setStatus(ShowtimeSeat.SeatStatus.BOOKED);
+    }
+
+    @Override
+    public List<ShowtimeSeatResponse> getShowtimeSeatsByIds(List<UUID> showtimeSeatIds) {
+        if (showtimeSeatIds.isEmpty()) return List.of();
+        return showtimeSeatRepository.findAllWithSeatDetailsByIdIn(showtimeSeatIds).stream().map(catalogMapper::toShowtimeSeatResponse).toList();
     }
 }

@@ -339,7 +339,7 @@ class HoldLifeCycleIntegrationTest {
 
         rabbitTemplate.receive(bookingProperties.rabbitMq().expiry().delayQueueName(), 2000);
 
-        doThrow(new RuntimeException("Simulated late failure")).when(bookingMapper).toBookingResponse(any());
+        doThrow(new RuntimeException("Simulated late failure")).when(bookingMapper).toBookingResponse(any(), anyList());
 
         assertThatThrownBy(() -> bookingService.confirmHold(savedUser.getId(), new BookingRequest(holdResponse.holdId(), "MOCK_CARD")))
                 .isInstanceOf(RuntimeException.class)
