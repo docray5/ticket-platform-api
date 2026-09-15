@@ -81,7 +81,7 @@ Booking (`ROLE_CUSTOMER`)
 - `POST /bookings`
     - `410 Gone` if the hold already expired
     - `402 Payment Required` if the mock payment step declines, replaying a successful request with the same `Idempotency-Key` + identical body returns the original `201`, never a second booking.
-    - request
+    - request with `Idempotency-Key` header
     ```json
     { "holdId": "<some-uuid>", "paymentMethod": "MOCK_CARD" }
     ```
