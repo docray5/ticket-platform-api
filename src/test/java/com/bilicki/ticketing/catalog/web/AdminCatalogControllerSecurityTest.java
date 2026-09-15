@@ -10,6 +10,7 @@ import com.bilicki.ticketing.config.SecurityConfig;
 import com.bilicki.ticketing.user.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -35,7 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ProblemDetailResponseWriter.class
 })
 public class AdminCatalogControllerSecurityTest {
-    private final String errorBaseUri = "https://api.ticketing.dev/errors/";
+    @Value("${app.error.base-uri}")
+    private String errorBaseUri;
 
     @Autowired
     private MockMvc mockMvc;

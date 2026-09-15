@@ -1,4 +1,4 @@
-[![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
+_[![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
 
 A backend for booking tickets, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
 
@@ -57,12 +57,26 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 - more info in the ADRs
 
 ## How to run:
-1. (**for local testing you don't need a .env file** as of right now, because a dev-only default secret is included in application.yml as a fallback when .env file does not exist, for convenience, real deployments must provide their own JWT_SECRET)
-2. Prerequisites (Java 21, Docker)
-3. `docker-compose up -d`
+1. Prerequisites (Java 21, Docker)
+2. for anything beyond pure local dev (custom secrets, testing against a real JWT value): `cp .env.example .env` (application.yml has dev only fallbacks)
+3. `docker compose up -d`
 4. `./mvnw spring-boot:run`
 5. and after starting the app, docs are available under this url: http://localhost:8080/swagger-ui/index.html
 6. to run tests: `./mvnw test` (needs docker running)
+
+Config overview (dev fallbacks in the application.yml):
+
+| Variable               | Default                                                                        |
+|------------------------|--------------------------------------------------------------------------------|
+| `DB_URL`               | `jdbc:postgresql://localhost:5432/ticket_booking_db`                           |
+| `DB_USERNAME`          | `admin`                                                                        |
+| `DB_PASSWORD`          | `admin`                                                                        |
+| `RABBITMQ_URL`         | `localhost`                                                                    |
+| `RABBITMQ_USER`        | `guest`                                                                        |
+| `RABBITMQ_PASS`        | `guest`                                                                        |
+| `JWT_SECRET`           | dev fallback is set in the `application.yml`, remember to create .env for prod |
+| `PAYMENT_DECLINE_RATE` | `0.1`                                                                          |
+| `APP_ERROR_BASE_URI`   | `https://api.ticketing.dev/errors/`                                            |
 
 ## Roadmap:
 
@@ -84,7 +98,6 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 - Move idempotency-key storage from Postgres to Redis if key volume ever becomes a bottleneck
 
 ## Known limitations:
-- For now secrets are managed via local spring variables for local development
 - No Update/Delete for admin endpoints, and no seeded way to create an Admin account - currently needs a manual DB edit
 - No refunds
 - HS256 vs. RS256: JWTs are signed symmetrically (HS256). This is fine for a monolith, but I would upgrade this to asymmetric (RS256) if were to split this into microservices
@@ -98,4 +111,4 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 Current DB schema:
 ![db schema](/docs/db-schema.png)
 
-credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema
+credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema_

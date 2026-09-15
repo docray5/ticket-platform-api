@@ -18,6 +18,8 @@ spring:
     port: 5672
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASS:guest}
+  config:
+    import: optional:file:.env[.properties]
 
 management:
   endpoints:
@@ -38,7 +40,7 @@ jwt:
 
 app:
   error:
-    base-uri: "https://api.ticketing.dev/errors/"
+    base-uri: ${APP_ERROR_BASE_URI:https://api.ticketing.dev/errors/}
   idempotency:
     expiration-hours: 24
 
@@ -57,4 +59,4 @@ booking:
       routing-key: "hold.confirm.key"
 
 payment:
-  decline-rate: 0.1
+  decline-rate: ${PAYMENT_DECLINE_RATE:0.1}
