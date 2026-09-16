@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.catalog.service;
 
+import com.bilicki.ticketing.catalog.ShowtimeSeatResponse;
 import com.bilicki.ticketing.catalog.internal.*;
 import com.bilicki.ticketing.catalog.web.*;
 import lombok.AllArgsConstructor;

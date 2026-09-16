@@ -1,10 +1,8 @@
 [![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
 
-WIP
+A backend for booking tickets, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
 
-backend for a ticket booking platform built with spring
-
-the goal is to make it as much in an industry standard way as possible.
+This is a modular monolith built to demonstrate concurrent data contention, idempotent financial operations, and reliable async messaging in a stateless API.
 
 ## Tech Stack
 
@@ -12,46 +10,105 @@ the goal is to make it as much in an industry standard way as possible.
 |:-------------------------|:----------------------------------------------------------|
 | **Language / Framework** | Java 21, Spring Boot 4.0.7                                |
 | **Database**             | PostgreSQL + Flyway Migrations                            |
-| **Messaging**            | RabbitMQ (soon)                                           |
+| **Messaging**            | RabbitMQ (TTL + DLX pattern)                              |
 | **Testing**              | Testcontainers, JUnit 5, Mockito                          |
 | **Auth & API Docs**      | Spring Security, JWT (HS256), Swagger (springdoc-openapi) |
 
-## Implemented so far:
-- JWT auth for login
-- Swagger docs
-- Admin catalog (Create + read and safe showtime creation that checks for any overlapping showtime and bulk seat generation)
-- RFC 7807 error handling
+## Docs:
+- [Architecture explanation, with request flow for seat reservation](/docs/architecture.md)
+- [ADR 01: Modular monolith vs microservices](/docs/adrs/01-modular-monolith-vs-microservices.md)
+- [ADR 02: Locking and race conditions](/docs/adrs/02-pessimistic-vs-optimistic-locking.md)
+- [ADR 03: Event driven expiry with RabbitMQ](/docs/adrs/03-delayed-queue-vs-polling-for-hold-expiry.md)
+- [ADR 04: Idempotency strategy](/docs/adrs/04-idempotency-key-strategy.md)
+- [Api Endpoints](/docs/api-endpoints.md) (alternative to swagger)
+- [Db schema](/docs/db-schema.png) (also below)
+
+## Features and capabilities:
+
+**Race conditions and concurrency defenses**
+- Pessimistic row locking for seat reservation. It solves the classic "a lot of people click reserve on the last seat" problem, which resolves to exactly one winner, every time. It is also deadlock free.
+- Apart from the point above, I have also implemented optimistic locking as a second line of defense on hold state transitions.
+- Confirm vs Expire race is handled explicitly: if a hold's expiry message arrives at the same millisecond a customer confirms payment, both of them fight for the same row lock and whichever wins transitions the state, the other fails cleanly with no corrupted seat data. This is also covered by a multithreaded test.
+- Seat state machine (AVAILABLE -> HELD -> BOOKED), reverting atomically on cancel or expiry.
+- More info on the row lock: [ADR-02](/docs/adrs/02-pessimistic-vs-optimistic-locking.md) 
+
+**Idempotency**
+- Every hold creation and booking confirmation request requires an `Idempotency-Key` header. Retried requests (same key, same body) replay the exact original response instead of re-running any business logic, so if a user with bad internet connection spams the pay button like 5 times, they get charged only once.
+- The filter hashes request bodies of these requests, so reusing a key with a different body is rejected outright instead of silently doing the wrong thing.
+- Concurrent duplicate requests (same key, still in flight) are caught and cleanly rejected via db unique constraints rather than racing each other into two bookings.
+- See: [ADR-04](/docs/adrs/04-idempotency-key-strategy.md)
+
+**Async messaging**
+- Hold expiry runs on RabbitMQ's queue-level TTL and a dead-letter exchange rather than database polling, this avoids the classic per-message-TTL head-of-line-blocking trap.
+- Messages are only published after the database transaction actually commits, so a rolled-back request never produces a ghost RabbitMQ message.
+- Async, event-driven booking confirmations, the listener lives in booking, delegating the actual notification work to a separate notification module
+- Correlation IDs follow a request across the async boundary. A hold created via HTTP and expired seconds later by a queue consumer show up under the same ID in the logs.
+- See: [ADR-03](/docs/adrs/03-delayed-queue-vs-polling-for-hold-expiry.md)
+
+**Everything else**
+- Modular monolith architecture: modules are strictly separated and no module reaches into another's repositories or entities directly, only through a public facade. (currently only a convention as I haven't implemented arch unit tests yet)
+- JWT auth (HS256) with role-based access control
+- Admin catalog management — venues, halls, movies, showtimes (with overlap checking, so you can't double-book a hall), bulk seat generation
+- Mock payment processing with a simulated 10% decline rate
+- Structured, RFC 7807–compliant error responses across the whole API, with a correlation ID on every error for tracing
+- Interactive API docs via Swagger
+- Payment runs in its own independent transaction, so a declined payment is permanently audited even when the parent booking transaction rolls back.
+- A concurrency test suite that races real threads against real PostgreSQL and RabbitMQ instances: last-seat contention, confirm-vs-expire, cancel-vs-expire, duplicate idempotent requests - asserting the exact outcome each time
+- more info in the ADRs
 
 ## How to run:
-1. (**for local testing you don't need a .env file** as of right now, because a dev-only default secret is included in application.yml as a fallback when .env file does not exist, for convenience, real deployments must provide their own JWT_SECRET)
-2. Prerequisites (Java 21, Docker)
-3. `docker-compose up`
+1. Prerequisites (Java 21, Docker)
+2. for anything beyond pure local dev: `cp .env.example .env` (application.yml has dev only fallbacks)
+3. `docker compose up -d`
 4. `./mvnw spring-boot:run`
 5. and after starting the app, docs are available under this url: http://localhost:8080/swagger-ui/index.html
+6. to run tests: `./mvnw test` (needs docker running)
 
-## Scope for the mvp:
-- *Race conditions:* expiry vs paying and two people reserving the same seat at the same millisecond
-- Seat reservation expiry with RabbitMQ
-- mocked payments
-- JWT auth
-- *Idempotency:* preventing double bookings
-- structure using the modular monolith paradigm
-- users being able to browse events, see limited seats/tickets per event, hold a ticket during checkout (with expiry), and complete payment
-- documentation using swagger
+Config overview (dev fallbacks in the application.yml):
 
-Known limitations:
-- secrets are managed via local spring variables for local development but for production AWS deployment or other tools would be used
-- No Admin Update/Delete
+| Variable               | Default                                                                        |
+|------------------------|--------------------------------------------------------------------------------|
+| `DB_URL`               | `jdbc:postgresql://localhost:5432/ticket_booking_db`                           |
+| `DB_USERNAME`          | `admin`                                                                        |
+| `DB_PASSWORD`          | `admin`                                                                        |
+| `RABBITMQ_URL`         | `localhost`                                                                    |
+| `RABBITMQ_USER`        | `guest`                                                                        |
+| `RABBITMQ_PASS`        | `guest`                                                                        |
+| `JWT_SECRET`           | dev fallback is set in the `application.yml`, remember to create .env for prod |
+| `PAYMENT_DECLINE_RATE` | `0.1`                                                                          |
+| `APP_ERROR_BASE_URI`   | `https://api.ticketing.dev/errors/`                                            |
+
+## Roadmap:
+
+**MVP - Completed, see features above**
+
+**Phase 2**
+- Backstop reconciliation job for orphaned holds, in case a RabbitMQ expiry message is ever lost
+- Admin update/delete endpoints, and a real way to seed an admin account
+- Refresh tokens, OAuth2, password reset
+- Rate limiting on auth endpoints
+- ArchUnit test enforcing module boundaries in CI, not just convention
+- Metrics
+- Outbox pattern
+
+**Phase 3 - if the project outgrows a monolith**
+- Gatling/k6 test to test api under N load
+- Migrate to microservices - thanks to modular monolith it will require less friction, although the synchronous pessimistic locking model would need to be replaced with distributed locks (e.g., Redis)
+- Swap HS256 for RS256 once there's more than one service verifying tokens
+- Move idempotency-key storage from Postgres to Redis if key volume ever becomes a bottleneck
+
+## Known limitations:
+- No Update/Delete for admin endpoints, and no seeded way to create an Admin account - currently needs a manual DB edit
 - No refunds
-- HS256 vs. RS256: JWTs are signed symmetrically (HS256). This is fine for a monolith, but I would upgrade this to asymmetric (RS256) if were to split this into multiple microservices
-- no rate limiting
+- HS256 vs. RS256: JWTs are signed symmetrically (HS256). This is fine for a monolith, but I would upgrade this to asymmetric (RS256) if were to split this into microservices
+- No rate limiting
+- A payment decline is cached against its Idempotency-Key just like a success is, so retrying with the same key after a `402` replays the same decline forever. The client needs a fresh key to actually retry payment.
+- Client side retry risk, if the user successfully pays but their network drops before receiving the response, front end might generate a new idempotency key on retry (if implemented that way). Then, if the user clicks pay again, it bypasses the idempotency lock and double charges them. So proper client side integration requires caching the key locally per logical attempt.
+- Payment processing is mocked with a simulated 10% decline rate
+- No independent backstop job for holds yet: if a hold-expiry RabbitMQ message is ever lost, there's currently no periodic sweep that would catch and release the orphaned hold (there is one for the idempotency table, not yet for holds).
+- No refresh tokens, no OAuth2, no password reset flow, there is short-lived access token only, re-login on expiry.
 
-Docs:
-- [Api Endpoints](/docs/api-endpoints.md) (or rather an implementation plan for endpoints) (also swagger)
-- [Architecture](/docs/architecture.md)
-- [Adr 01: Modular monolith vs microservices](/docs/adrs/01-modular-monolith-vs-microservices.md)
+Current DB schema:
+![db schema](/docs/db-schema.png)
 
-The first ever sketch of the database: (the actual db is a bit different already)
-![initial db scheme](/docs/initial-db-scheme.png)
-
-credits to https://dbdiagram.io/ for visualization
+credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema

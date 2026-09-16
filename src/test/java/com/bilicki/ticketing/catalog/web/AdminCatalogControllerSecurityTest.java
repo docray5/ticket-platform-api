@@ -1,7 +1,8 @@
 package com.bilicki.ticketing.catalog.web;
 
 import com.bilicki.ticketing.catalog.service.CatalogService;
-import com.bilicki.ticketing.common.ProblemDetailReposeWriter;
+import com.bilicki.ticketing.common.IdempotencyKeyRepository;
+import com.bilicki.ticketing.common.ProblemDetailResponseWriter;
 import com.bilicki.ticketing.config.JwtAuthenticationFilter;
 import com.bilicki.ticketing.config.RestAccessDeniedHandler;
 import com.bilicki.ticketing.config.RestAuthenticationEntryPoint;
@@ -9,12 +10,15 @@ import com.bilicki.ticketing.config.SecurityConfig;
 import com.bilicki.ticketing.user.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Clock;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -29,10 +33,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         JwtAuthenticationFilter.class,
         RestAccessDeniedHandler.class,
         RestAuthenticationEntryPoint.class,
-        ProblemDetailReposeWriter.class
+        ProblemDetailResponseWriter.class
 })
 public class AdminCatalogControllerSecurityTest {
-    private final String errorBaseUri = "https://api.ticketing.dev/errors/";
+    @Value("${app.error.base-uri}")
+    private String errorBaseUri;
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,6 +47,12 @@ public class AdminCatalogControllerSecurityTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private IdempotencyKeyRepository idempotencyKeyRepository;
+
+    @MockitoBean
+    private Clock clock;
 
     private static final String VENUE_BODY = """
             {"name": "Cool Venue", "address": "Some Street 123"}

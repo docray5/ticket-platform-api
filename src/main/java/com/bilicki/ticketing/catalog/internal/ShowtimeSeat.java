@@ -3,6 +3,7 @@ package com.bilicki.ticketing.catalog.internal;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,6 +14,10 @@ import java.util.UUID;
 @Getter
 @Entity
 public class ShowtimeSeat {
+    public enum SeatStatus {
+        AVAILABLE, HELD, BOOKED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -28,8 +33,10 @@ public class ShowtimeSeat {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Setter
     @Column(nullable = false)
-    private String status = "AVAILABLE";
+    @Enumerated(EnumType.STRING)
+    private SeatStatus status = SeatStatus.AVAILABLE;
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();

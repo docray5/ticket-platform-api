@@ -13,6 +13,14 @@ spring:
     hibernate:
       ddl-auto: validate
 
+  rabbitmq:
+    host: ${RABBITMQ_URL:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+  config:
+    import: optional:file:.env[.properties]
+
 management:
   endpoints:
     web:
@@ -32,4 +40,23 @@ jwt:
 
 app:
   error:
-    base-uri: "https://api.ticketing.dev/errors/"
+    base-uri: ${APP_ERROR_BASE_URI:https://api.ticketing.dev/errors/}
+  idempotency:
+    expiration-hours: 24
+
+booking:
+  hold:
+    ttl: 5m
+  rabbit-mq:
+    expiry:
+      queue-name: "hold.expiry.queue"
+      delay-queue-name: "hold.expiry.delay.queue"
+      exchange-name: "hold.expiry.exchange"
+      routing-key: "hold.expiry.key"
+    confirm:
+      queue-name: "hold.confirm.queue"
+      exchange-name: "hold.confirm.exchange"
+      routing-key: "hold.confirm.key"
+
+payment:
+  decline-rate: ${PAYMENT_DECLINE_RATE:0.1}

@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.catalog.internal;
 
+import com.bilicki.ticketing.catalog.ShowtimeSeatResponse;
 import com.bilicki.ticketing.catalog.web.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
