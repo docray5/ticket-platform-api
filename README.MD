@@ -1,4 +1,4 @@
-_[![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
+[![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
 
 A backend for booking tickets, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
 
@@ -58,7 +58,7 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 
 ## How to run:
 1. Prerequisites (Java 21, Docker)
-2. for anything beyond pure local dev (custom secrets, testing against a real JWT value): `cp .env.example .env` (application.yml has dev only fallbacks)
+2. for anything beyond pure local dev: `cp .env.example .env` (application.yml has dev only fallbacks)
 3. `docker compose up -d`
 4. `./mvnw spring-boot:run`
 5. and after starting the app, docs are available under this url: http://localhost:8080/swagger-ui/index.html
