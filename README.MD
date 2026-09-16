@@ -111,4 +111,4 @@ Config overview (dev fallbacks in the application.yml):
 Current DB schema:
 ![db schema](/docs/db-schema.png)
 
-credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema_
+credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema
