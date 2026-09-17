@@ -67,17 +67,18 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 
 Config overview (dev fallbacks in the application.yml):
 
-| Variable               | Default                                                                        |
-|------------------------|--------------------------------------------------------------------------------|
-| `DB_URL`               | `jdbc:postgresql://localhost:5432/ticket_booking_db`                           |
-| `DB_USERNAME`          | `admin`                                                                        |
-| `DB_PASSWORD`          | `admin`                                                                        |
-| `RABBITMQ_URL`         | `localhost`                                                                    |
-| `RABBITMQ_USER`        | `guest`                                                                        |
-| `RABBITMQ_PASS`        | `guest`                                                                        |
-| `JWT_SECRET`           | dev fallback is set in the `application.yml`, remember to create .env for prod |
-| `PAYMENT_DECLINE_RATE` | `0.1`                                                                          |
-| `APP_ERROR_BASE_URI`   | `https://api.ticketing.dev/errors/`                                            |
+| Variable               | Default                                                           |
+|------------------------|-------------------------------------------------------------------|
+| `DB_URL`               | `jdbc:postgresql://localhost:5432/ticket_booking_db`              |
+| `DB_USERNAME`          | `admin`                                                           |
+| `DB_PASSWORD`          | `admin`                                                           |
+| `RABBITMQ_URL`         | `localhost`                                                       |
+| `RABBITMQ_USER`        | `guest`                                                           |
+| `RABBITMQ_PASS`        | `guest`                                                           |
+| `JWT_SECRET`           | dev fallback is set in the `application.yml`                      |
+| `PAYMENT_DECLINE_RATE` | `0.1`                                                             |
+| `APP_ERROR_BASE_URI`   | `https://api.ticketing.dev/errors/`                               |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000`  (more origins can be separated by comma) |
 
 ## Roadmap:
 
