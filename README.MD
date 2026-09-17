@@ -62,7 +62,8 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 3. `docker compose up -d`
 4. `./mvnw spring-boot:run`
 5. and after starting the app, docs are available under this url: http://localhost:8080/swagger-ui/index.html
-6. to run tests: `./mvnw test` (needs docker running)
+- to run tests: `./mvnw test` (needs docker running)
+- you can also run the spring app as a docker container with: `docker compose -f docker-compose.app.yml up --build`
 
 Config overview (dev fallbacks in the application.yml):
 
