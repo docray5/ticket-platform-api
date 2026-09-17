@@ -73,6 +73,9 @@ Config overview (dev fallbacks in the application.yml):
 | `DB_USERNAME`          | `admin`                                                           |
 | `DB_PASSWORD`          | `admin`                                                           |
 | `RABBITMQ_URL`         | `localhost`                                                       |
+| `RABBITMQ_PORT`        | `5672`                                                            |
+| `RABBITMQ_VHOST`       | `/`                                                               |
+| `RABBITMQ_SSL`         | `false`                                                           |
 | `RABBITMQ_USER`        | `guest`                                                           |
 | `RABBITMQ_PASS`        | `guest`                                                           |
 | `JWT_SECRET`           | dev fallback is set in the `application.yml`                      |

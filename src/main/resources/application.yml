@@ -15,9 +15,13 @@ spring:
 
   rabbitmq:
     host: ${RABBITMQ_URL:localhost}
-    port: 5672
+    port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASS:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL:false}
+
   config:
     import: optional:file:.env[.properties]
 
