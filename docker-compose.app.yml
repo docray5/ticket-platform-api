@@ -1,0 +1,20 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ticketing-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/ticket_booking_db
+      - RABBITMQ_URL=rabbitmq
+    networks:
+      - ticketing-net
+
+networks:
+  ticketing-net:
+    external: true
+    name: ticketing_default
