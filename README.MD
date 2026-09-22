@@ -121,6 +121,8 @@ Config overview (dev fallbacks in the application.yml):
 - Payment processing is mocked with a simulated 10% decline rate
 - No independent backstop job for holds yet: if a hold-expiry RabbitMQ message is ever lost, there's currently no periodic sweep that would catch and release the orphaned hold (there is one for the idempotency table, not yet for holds).
 - No refresh tokens, no OAuth2, no password reset flow, there is short-lived access token only, re-login on expiry.
+- Connection Pool Starvation Deadlock inside `confirmHold` calling `pay` with its own transaction
+- As of right now you can book and browse showtimes from the past for live demo purposes
 
 Current DB schema:
 ![db schema](/docs/db-schema.png)
