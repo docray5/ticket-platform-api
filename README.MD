@@ -1,8 +1,16 @@
 [![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
+[![API Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fticket-platform-api.onrender.com%2Factuator%2Fhealth&query=%24.status&label=API%20Status&color=brightgreen&logo=render)](https://ticket-platform-api.onrender.com/actuator/health)
 
 A backend for booking tickets, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
 
 This is a modular monolith built to demonstrate concurrent data contention, idempotent financial operations, and reliable async messaging in a stateless API.
+
+## Live demo and deployment
+- API: https://ticket-platform-api.onrender.com/actuator/health
+- Swagger docs: https://ticket-platform-api.onrender.com/swagger-ui/index.html
+- Frontend demo to interact with the API: https://ticket-booking-front.bilioften.workers.dev/
+  - Built with Next.js and React.
+  - Login for test account if you don't want to create one: `test@gmail.com` with pass: `qwerty123`
 
 ## Tech Stack
 
@@ -54,6 +62,7 @@ This is a modular monolith built to demonstrate concurrent data contention, idem
 - Interactive API docs via Swagger
 - Payment runs in its own independent transaction, so a declined payment is permanently audited even when the parent booking transaction rolls back.
 - A concurrency test suite that races real threads against real PostgreSQL and RabbitMQ instances: last-seat contention, confirm-vs-expire, cancel-vs-expire, duplicate idempotent requests - asserting the exact outcome each time
+- Automatic deployment to https://render.com/ after merging PRs to main branch.
 - more info in the ADRs
 
 ## How to run:
@@ -116,4 +125,8 @@ Config overview (dev fallbacks in the application.yml):
 Current DB schema:
 ![db schema](/docs/db-schema.png)
 
-credits to https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema
+credits:
+- https://dbdiagram.io/ for visualization of the [initial db schema](/docs/initial-db-scheme.png), and to DBeaver for the visualization of the current db schema
+- https://render.com/ for DB and the API hosting
+- https://www.cloudamqp.com/ for message broker hosting
+- https://www.cloudflare.com/ for hosting front end.
