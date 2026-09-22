@@ -1,7 +1,7 @@
 [![Java CI with Maven](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/docray5/ticket-platform-api/actions/workflows/build-and-test.yml)
 [![API Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fticket-platform-api.onrender.com%2Factuator%2Fhealth&query=%24.status&label=API%20Status&color=brightgreen&logo=render)](https://ticket-platform-api.onrender.com/actuator/health)
 
-A backend for booking tickets, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
+A backend for a ticket booking platform, built to survive the messy stuff like: high traffic race conditions, flaky payments, and users who double-click everything. Spring Boot, PostgreSQL, and RabbitMQ underneath.
 
 This is a modular monolith built to demonstrate concurrent data contention, idempotent financial operations, and reliable async messaging in a stateless API.
 
