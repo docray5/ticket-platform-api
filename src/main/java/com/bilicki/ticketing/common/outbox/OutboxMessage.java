@@ -1,6 +1,8 @@
 package com.bilicki.ticketing.common.outbox;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
@@ -8,7 +10,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_messages")
-public class Outbox {
+@Getter
+@NoArgsConstructor
+public class OutboxMessage {
     public enum OutboxStatus { PENDING, PROCESSED, FAILED }
 
     @Id
@@ -41,4 +45,24 @@ public class Outbox {
 
     @Column(name = "processed_at")
     private Instant processedAt;
+
+    public OutboxMessage(String exchange, String routingKey, String payloadType, String payload) {
+        this.exchange = exchange;
+        this.routingKey = routingKey;
+        this.payloadType = payloadType;
+        this.payload = payload;
+    }
+
+    public void markProcessed() {
+        this.status = OutboxStatus.PROCESSED;
+        this.processedAt = Instant.now();
+    }
+
+    public void incrementRetry(int maxRetries) {
+        this.retryCount++;
+        if (this.retryCount >= maxRetries) {
+            this.status = OutboxStatus.FAILED;
+            this.processedAt = Instant.now();
+        }
+    }
 }
