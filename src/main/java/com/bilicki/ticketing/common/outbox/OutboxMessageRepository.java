@@ -1,10 +1,21 @@
 package com.bilicki.ticketing.common.outbox;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.NativeQuery;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, UUID> {
-    List<OutboxMessage> findAllByStatusOrderByCreatedAtAsc(OutboxMessage.OutboxStatus status); // TODO should probably use some locking strat
+
+    @NativeQuery("""
+        SELECT * FROM outbox_messages
+        WHERE status = :status ORDER BY created_at
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+    """)
+    List<OutboxMessage> findBatchByStatus(@Param("status") String status, int limit);
+
+
 }

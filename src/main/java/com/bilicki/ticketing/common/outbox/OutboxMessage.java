@@ -44,6 +44,7 @@ public class OutboxMessage {
     private Instant createdAt = Instant.now();
 
     @Column(name = "processed_at")
+    @Setter
     private Instant processedAt;
 
     public OutboxMessage(String exchange, String routingKey, String payloadType, String payload) {
