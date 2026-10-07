@@ -9,3 +9,6 @@ CREATE TABLE outbox_messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ
 );
+
+CREATE INDEX idx_outbox_pending ON outbox_messages (created_at) WHERE status = 'PENDING';
+CREATE INDEX idx_outbox_processed ON outbox_messages (processed_at) WHERE status = 'PROCESSED';
