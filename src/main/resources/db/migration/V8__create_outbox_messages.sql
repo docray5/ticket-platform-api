@@ -5,6 +5,7 @@ CREATE TABLE outbox_messages (
     payload TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSED', 'FAILED')),
     retry_count INT NOT NULL DEFAULT 0,
+    last_error TEXT,
     next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ

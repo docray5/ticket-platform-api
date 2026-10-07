@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class OutboxMessage {
+    private static final int MAX_ERROR_LENGTH = 1000;
+
     public enum OutboxStatus { PENDING, PROCESSED, FAILED }
 
     @Id
@@ -37,6 +40,13 @@ public class OutboxMessage {
     @Setter
     private int retryCount = 0;
 
+    @Column(name = "last_error")
+    private String lastError;
+
+    @Column(name = "next_attempt_at")
+    @Setter
+    private Instant nextAttemptAt = Instant.now();
+
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -55,11 +65,19 @@ public class OutboxMessage {
         this.processedAt = Instant.now();
     }
 
-    public void incrementRetry(int maxRetries) {
+    public void recordFailure(String error, int maxRetries, Instant now, Duration backoff) {
         this.retryCount++;
+        this.lastError = truncate(error);
         if (this.retryCount >= maxRetries) {
             this.status = OutboxStatus.FAILED;
-            this.processedAt = Instant.now();
+            this.processedAt = now;
+        } else {
+            this.nextAttemptAt = now.plus(backoff);
         }
+    }
+
+    private static String truncate(String s) {
+        if (s == null) return "unknown error";
+        return s.length() <= MAX_ERROR_LENGTH ? s : s.substring(0, MAX_ERROR_LENGTH);
     }
 }
