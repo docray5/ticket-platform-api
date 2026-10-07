@@ -25,9 +25,6 @@ public class OutboxMessage {
     @Column(name = "routing_key", nullable = false)
     private String routingKey;
 
-    @Column(name = "payload_type", nullable = false)
-    private String payloadType;
-
     @Column(nullable = false)
     private String payload;
 
@@ -47,10 +44,9 @@ public class OutboxMessage {
     @Setter
     private Instant processedAt;
 
-    public OutboxMessage(String exchange, String routingKey, String payloadType, String payload) {
+    public OutboxMessage(String exchange, String routingKey, String payload) {
         this.exchange = exchange;
         this.routingKey = routingKey;
-        this.payloadType = payloadType;
         this.payload = payload;
     }
 

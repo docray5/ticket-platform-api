@@ -17,9 +17,8 @@ public class OutboxService {
     public void recordEvent(String exchangeName, String routingKey, Object payload) {
         try {
             String jsonPayload = objectMapper.writeValueAsString(payload);
-            String payloadType = payload.getClass().getName();
 
-            OutboxMessage outboxMessage = new OutboxMessage(exchangeName, routingKey, payloadType, jsonPayload);
+            OutboxMessage outboxMessage = new OutboxMessage(exchangeName, routingKey, jsonPayload);
 
             outboxMessageRepository.save(outboxMessage);
 

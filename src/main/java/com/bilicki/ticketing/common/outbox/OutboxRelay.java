@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -26,23 +25,25 @@ public class OutboxRelay {
     private Long pollInterval = 1000L;
     private Integer maxRetries = 3;
 
+    public void relay() {
+
+    }
+
     @Scheduled(fixedDelay = 1000L)
     @Transactional
     public void publishOutboxMessages() {
         List<OutboxMessage> messages = outboxMessageRepository.findBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), BATCH_SIZE);
 
+
+
         messages.forEach(message -> {
             try {
                 rabbitTemplate.convertAndSend(message.getExchange(), message.getRoutingKey(), toAmqpMessage(message));
 
-                message.setProcessedAt(Instant.now(clock));
-                message.setStatus(OutboxMessage.OutboxStatus.PROCESSED);
+                message.markProcessed();
             } catch (Exception e) {
                 log.warn("Outbox message publish {} failed, attempt: {}, {}", message.getId(), message.getRetryCount(), e.toString());
-                message.setRetryCount(message.getRetryCount() + 1);
-                if (message.getRetryCount() >= maxRetries) {
-                    message.setStatus(OutboxMessage.OutboxStatus.FAILED);
-                }
+                message.incrementRetry(maxRetries);
             }
         });
     }
@@ -53,7 +54,6 @@ public class OutboxRelay {
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
                 .setContentEncoding(StandardCharsets.UTF_8.name())
                 .setMessageId(message.getId().toString())
-                .setHeader("__TypeId__", message.getPayloadType())
                 .setDeliveryMode(MessageDeliveryMode.PERSISTENT)
                 .build();
     }
