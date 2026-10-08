@@ -1,5 +1,6 @@
 package com.bilicki.ticketing.common.outbox;
 
+import com.bilicki.ticketing.config.OutboxProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
@@ -23,19 +24,14 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 @Slf4j
 public class OutboxRelay {
-    private Integer BATCH_SIZE = 20;
-    private Integer MAX_BACKOFF_SECONDS = 60;
+    private final OutboxProperties properties;
 
     private final OutboxMessageRepository outboxMessageRepository;
     private final RabbitTemplate rabbitTemplate;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
-    private Long pollInterval = 1000L;
-    private Integer maxRetries = 8;
-    private Duration confirmTimeout = Duration.ofSeconds(5);
-
-    @Scheduled(fixedDelay = 1000L)
+    @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:PT1S}")
     public void relay() {
         boolean moreLeftToProcess = true;
         while (moreLeftToProcess) {
@@ -46,7 +42,7 @@ public class OutboxRelay {
 
     /** @return true if there are more messages to be processed still */
     public boolean publishOutboxMessages() {
-        List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), BATCH_SIZE);
+        List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), properties.batchSize());
 
         Instant now = Instant.now(clock);
         Map<OutboxMessage, CorrelationData> inFlight = new LinkedHashMap<>();
@@ -60,10 +56,10 @@ public class OutboxRelay {
             }
         }
 
-        long deadline = System.nanoTime() + confirmTimeout.toNanos();
+        long deadline = System.nanoTime() + properties.confirmTimeout().toNanos();
         inFlight.forEach((message, correlation) -> awaitConfirm(message, correlation, deadline, now));
 
-        return messages.size() == BATCH_SIZE;
+        return messages.size() == properties.batchSize();
     }
 
     private void awaitConfirm(OutboxMessage message, CorrelationData correlation, long deadlineNanos, Instant now) {
@@ -87,8 +83,8 @@ public class OutboxRelay {
     }
 
     private void fail(OutboxMessage message, String error, Instant now) {
-        long seconds = Math.min(MAX_BACKOFF_SECONDS, 1L << Math.min(message.getRetryCount(), 6));
-        message.recordFailure(error, maxRetries, now, Duration.ofSeconds(seconds));
+        long seconds = Math.min(properties.maxBackoffSeconds(), 1L << Math.min(message.getRetryCount(), 6));
+        message.recordFailure(error, properties.maxRetries(), now, Duration.ofSeconds(seconds));
 
         if (message.getStatus() == OutboxMessage.OutboxStatus.FAILED) {
             log.error("Outbox message {} permanently FAILED after {} attempts: {}", message.getId(), message.getRetryCount(), error);
