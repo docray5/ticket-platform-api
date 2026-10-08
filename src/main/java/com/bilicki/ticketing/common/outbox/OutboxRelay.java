@@ -8,7 +8,7 @@ import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -23,26 +23,30 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 @Slf4j
 public class OutboxRelay {
-    private Integer BATCH_SIZE = 30;
+    private Integer BATCH_SIZE = 20;
     private Integer MAX_BACKOFF_SECONDS = 60;
 
     private final OutboxMessageRepository outboxMessageRepository;
     private final RabbitTemplate rabbitTemplate;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     private Long pollInterval = 1000L;
-    private Integer maxRetries = 3;
+    private Integer maxRetries = 8;
     private Duration confirmTimeout = Duration.ofSeconds(5);
 
+    @Scheduled(fixedDelay = 1000L)
     public void relay() {
-
+        boolean moreLeftToProcess = true;
+        while (moreLeftToProcess) {
+            moreLeftToProcess = transactionTemplate.execute(status -> publishOutboxMessages());
+            if (moreLeftToProcess) log.info("Processing batch...");
+        }
     }
 
     /** @return true if there are more messages to be processed still */
-    @Scheduled(fixedDelay = 1000L)
-    @Transactional
     public boolean publishOutboxMessages() {
-        List<OutboxMessage> messages = outboxMessageRepository.findBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), BATCH_SIZE);
+        List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), BATCH_SIZE);
 
         Instant now = Instant.now(clock);
         Map<OutboxMessage, CorrelationData> inFlight = new LinkedHashMap<>();
@@ -54,7 +58,6 @@ public class OutboxRelay {
             } catch (AmqpException e) {
                 fail(message, e.getMessage(), now);
             }
-
         }
 
         long deadline = System.nanoTime() + confirmTimeout.toNanos();

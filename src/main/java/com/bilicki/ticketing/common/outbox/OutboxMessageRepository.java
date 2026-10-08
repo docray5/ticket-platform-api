@@ -15,7 +15,7 @@ public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, UU
         LIMIT :limit
         FOR UPDATE SKIP LOCKED
     """)
-    List<OutboxMessage> findBatchByStatus(@Param("status") String status, int limit);
+    List<OutboxMessage> findNextBatchByStatus(@Param("status") String status, int limit);
 
 
 }
