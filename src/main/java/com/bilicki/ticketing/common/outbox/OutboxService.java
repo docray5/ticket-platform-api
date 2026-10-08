@@ -21,8 +21,6 @@ public class OutboxService {
             OutboxMessage outboxMessage = new OutboxMessage(exchangeName, routingKey, jsonPayload);
 
             outboxMessageRepository.save(outboxMessage);
-
-            // TODO should we already try to send a messege i.e trigger the relay?
         } catch (JacksonException e) {
             throw new IllegalArgumentException("Failed to serialize outbox payload", e);
         }

@@ -8,6 +8,7 @@ import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import com.bilicki.ticketing.catalog.SeatUnavailableException;
 import com.bilicki.ticketing.common.ForbiddenActionException;
+import com.bilicki.ticketing.common.outbox.OutboxService;
 import com.bilicki.ticketing.config.BookingProperties;
 import com.bilicki.ticketing.payment.PaymentDeclinedException;
 import com.bilicki.ticketing.payment.PaymentFacade;
@@ -60,6 +61,8 @@ public class BookingServiceTest {
     private PaymentFacade paymentFacade;
     @Mock
     private BookingRepository bookingRepository;
+    @Mock
+    private OutboxService outboxService;
 
     @Captor
     private ArgumentCaptor<HoldExpiryMessage> eventCaptor;
@@ -84,7 +87,7 @@ public class BookingServiceTest {
 
     @BeforeEach
     void setUp() {
-        bookingService = new BookingService(holdRepository, bookingMapper, catalogFacade, clock, eventPublisher, bookingProperties, paymentFacade, bookingRepository);
+        bookingService = new BookingService(holdRepository, bookingMapper, catalogFacade, clock, bookingProperties, paymentFacade, bookingRepository, outboxService);
         userId = UUID.randomUUID();
         holdId = UUID.randomUUID();
         showtimeId = UUID.randomUUID();
