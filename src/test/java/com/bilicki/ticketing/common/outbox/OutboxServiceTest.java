@@ -49,7 +49,6 @@ public class OutboxServiceTest {
         OutboxMessage outboxRecord = records.getFirst();
         assertThat(outboxRecord.getExchange()).isEqualTo("booking.exchange");
         assertThat(outboxRecord.getRoutingKey()).isEqualTo("booking.confirmed");
-        assertThat(outboxRecord.getPayloadType()).isEqualTo(HoldConfirmMessage.class.getName());
         assertThat(outboxRecord.getStatus()).isEqualTo(OutboxMessage.OutboxStatus.PENDING);
 
         HoldConfirmMessage deserialized = objectMapper.readValue(

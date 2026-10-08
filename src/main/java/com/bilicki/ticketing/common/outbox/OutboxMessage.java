@@ -63,6 +63,7 @@ public class OutboxMessage {
     public void markProcessed() {
         this.status = OutboxStatus.PROCESSED;
         this.processedAt = Instant.now();
+        this.lastError = null;
     }
 
     public void recordFailure(String error, int maxRetries, Instant now, Duration backoff) {

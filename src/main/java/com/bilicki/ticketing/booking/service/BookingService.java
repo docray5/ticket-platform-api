@@ -8,6 +8,7 @@ import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.CatalogFacade;
 import com.bilicki.ticketing.catalog.ShowtimeSeatResponse;
 import com.bilicki.ticketing.common.ForbiddenActionException;
+import com.bilicki.ticketing.common.outbox.OutboxService;
 import com.bilicki.ticketing.config.BookingProperties;
 import com.bilicki.ticketing.payment.PaymentFacade;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +33,10 @@ public class BookingService {
     private final BookingMapper bookingMapper;
     private final CatalogFacade catalogFacade;
     private final Clock clock;
-    private final ApplicationEventPublisher eventPublisher;
     private final BookingProperties bookingProperties;
     private final PaymentFacade paymentFacade;
     private final BookingRepository bookingRepository;
+    private final OutboxService outboxService;
 
     @Transactional
     public HoldResponse createHold(UUID showtimeId, UUID userId, HoldRequest request) {
@@ -52,7 +53,7 @@ public class BookingService {
 
         Hold savedHold = holdRepository.save(hold);
 
-        eventPublisher.publishEvent(new HoldExpiryMessage(savedHold.getId(), MDC.get("correlationId")));
+        outboxService.recordEvent("", bookingProperties.rabbitMq().expiry().delayQueueName(), new HoldExpiryMessage(savedHold.getId(), MDC.get("correlationId")));
 
         return bookingMapper.toHoldResponse(savedHold);
     }
@@ -129,7 +130,7 @@ public class BookingService {
 
         paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
-        eventPublisher.publishEvent(new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
+        outboxService.recordEvent("", bookingProperties.rabbitMq().expiry().delayQueueName(), new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
 
         return toEnrichedBookingResponse(booking);
     }
