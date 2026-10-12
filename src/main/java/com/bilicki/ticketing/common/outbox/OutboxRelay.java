@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpConnectException;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.AmqpIOException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -47,15 +48,22 @@ public class OutboxRelay {
 
         List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), now, properties.batchSize());
 
+        if (messages.isEmpty()) {
+            return false;
+        }
+
         Map<OutboxMessage, CorrelationData> inFlight = new LinkedHashMap<>();
+        boolean brokerUnavailable = false;
+
         for (OutboxMessage message : messages) {
             CorrelationData correlation = new CorrelationData(message.getId().toString());
             try {
                 rabbitTemplate.convertAndSend(message.getExchange(), message.getRoutingKey(), toAmqpMessage(message), correlation);
                 inFlight.put(message, correlation);
-            } catch (AmqpConnectException e) {
+            } catch (AmqpConnectException | AmqpIOException e) {
                 log.warn("Broker connection refused while publishing message {}. Halting batch.", message.getId());
-                return false;
+                brokerUnavailable = true;
+                break;
             } catch (AmqpException e) {
                 fail(message, e.getMessage(), now);
             }
@@ -64,7 +72,7 @@ public class OutboxRelay {
         long deadline = System.nanoTime() + properties.confirmTimeout().toNanos();
         inFlight.forEach((message, correlation) -> awaitConfirm(message, correlation, deadline, now));
 
-        return messages.size() == properties.batchSize();
+        return !brokerUnavailable && messages.size() == properties.batchSize();
     }
 
     private void awaitConfirm(OutboxMessage message, CorrelationData correlation, long deadlineNanos, Instant now) {

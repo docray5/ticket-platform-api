@@ -58,7 +58,7 @@ app:
     max-retries: 8
     batch-size: 20
     max-backoff-seconds: 60
-    confirm-timeout: "PT5S"
+    confirm-timeout: "PT3S"
 
 booking:
   hold:

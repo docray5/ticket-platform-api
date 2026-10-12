@@ -6,3 +6,19 @@ booking:
     delay-queue-name: "hold.expiry.delay.queue-test"
     exchange-name: "hold.expiry.exchange-test"
     routing-key: "hold.expiry.key-test"
+
+spring:
+  rabbitmq:
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    channel-rpc-timeout: 5s
+
+app:
+  outbox:
+    poll-interval-ms: PT0.2S
+    confirm-timeout: 1s
+    max-retries: 50
+    max-backoff-seconds: 2
+    batch-size: 10
