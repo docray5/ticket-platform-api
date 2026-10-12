@@ -33,25 +33,21 @@ public class OutboxMessage {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    @Setter
     private OutboxStatus status = OutboxStatus.PENDING;
 
     @Column(name = "retry_count", nullable = false)
-    @Setter
     private int retryCount = 0;
 
     @Column(name = "last_error")
     private String lastError;
 
     @Column(name = "next_attempt_at")
-    @Setter
     private Instant nextAttemptAt = Instant.now();
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
 
     @Column(name = "processed_at")
-    @Setter
     private Instant processedAt;
 
     public OutboxMessage(String exchange, String routingKey, String payload) {
@@ -60,9 +56,9 @@ public class OutboxMessage {
         this.payload = payload;
     }
 
-    public void markProcessed() {
+    public void markProcessed(Instant now) {
         this.status = OutboxStatus.PROCESSED;
-        this.processedAt = Instant.now();
+        this.processedAt = now;
         this.lastError = null;
     }
 

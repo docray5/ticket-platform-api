@@ -24,8 +24,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.doAnswer;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({OutboxRelay.class, OutboxRelayConcurrencyTest.TestConfig.class})
-public class OutboxRelayConcurrencyTest {
+class OutboxRelayConcurrencyTest {
     @Container
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
@@ -59,7 +60,7 @@ public class OutboxRelayConcurrencyTest {
     static class TestConfig {
         @Bean
         public OutboxProperties outboxProperties() {
-            return new OutboxProperties("PT200MS", 3, 10, 60, Duration.ofSeconds(2));
+            return new OutboxProperties("PT0.2S", 3, 10, 60, Duration.ofSeconds(2));
         }
 
         @Bean
@@ -74,60 +75,57 @@ public class OutboxRelayConcurrencyTest {
         outboxMessageRepository.deleteAll();
     }
 
-    private final String exchangeName = "test.outbox";
-    private final String routingKey = "test.outbox.key";
-
     @Test
-    public void relayConcurrencyTest() throws InterruptedException {
+    void twoRelaysRunningAtOnce_sendEveryMessageExactlyOnce() throws Exception {
         int totalMessages = 50;
 
-        transactionTemplate.executeWithoutResult(s -> {
+        transactionTemplate.executeWithoutResult(status -> {
             for (int i = 0; i < totalMessages; i++) {
-                outboxMessageRepository.save(new OutboxMessage(exchangeName, routingKey, "some json"));
+                outboxMessageRepository.save(new OutboxMessage("test.outbox", "test.outbox.key", "some json"));
             }
         });
 
-        Set<String> sentMessageIds = ConcurrentHashMap.newKeySet();
+        Queue<String> sentMessageIds = new ConcurrentLinkedQueue<>();
+        Set<String> sendingThreads = ConcurrentHashMap.newKeySet();
 
         doAnswer(invocation -> {
             CorrelationData correlation = invocation.getArgument(3);
             sentMessageIds.add(correlation.getId());
+            sendingThreads.add(Thread.currentThread().getName());
+            Thread.sleep(15);
             correlation.getFuture().complete(new CorrelationData.Confirm(true, null));
             return null;
         }).when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch startSignal = new CountDownLatch(1);
-        CountDownLatch doneSignal = new CountDownLatch(2);
-
-        for (int i = 0; i < 2; i++) {
-            executor.submit(() -> {
-                try {
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                futures.add(executor.submit(() -> {
                     startSignal.await();
                     outboxRelay.relay();
-                } catch (Exception ignored) {
-                } finally {
-                    doneSignal.countDown();
-                }
-            });
+                    return null;
+                }));
+            }
+            startSignal.countDown();
+
+            for (Future<?> future : futures) {
+                future.get(30, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdownNow();
         }
 
-        startSignal.countDown();
-
-        boolean finishedInTime = doneSignal.await(15, TimeUnit.SECONDS);
-        executor.shutdownNow();
-
-        assertThat(finishedInTime).as("Relay threads should complete all batches").isTrue();
-
-        assertThat(sentMessageIds).hasSize(totalMessages);
-
-        List<OutboxMessage> remainingPending = outboxMessageRepository.findNextBatchByStatus(
-                OutboxMessage.OutboxStatus.PENDING.name(), Instant.now(), totalMessages
-        );
-        assertThat(remainingPending).isEmpty();
-
         List<OutboxMessage> allRows = outboxMessageRepository.findAll();
+
+        assertThat(sentMessageIds).hasSize(totalMessages).doesNotHaveDuplicates();
+        assertThat(sentMessageIds).containsExactlyInAnyOrderElementsOf(
+                allRows.stream().map(row -> row.getId().toString()).toList());
+        assertThat(sendingThreads).as("both relays must have taken part, or the test proved nothing").hasSize(2);
+
         assertThat(allRows).hasSize(totalMessages);
-        assertThat(allRows).allMatch(msg -> msg.getStatus() == OutboxMessage.OutboxStatus.PROCESSED);
+        assertThat(allRows).allMatch(row -> row.getStatus() == OutboxMessage.OutboxStatus.PROCESSED);
+        assertThat(allRows).allMatch(row -> row.getRetryCount() == 0);
     }
 }

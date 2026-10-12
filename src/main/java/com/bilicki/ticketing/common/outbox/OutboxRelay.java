@@ -77,7 +77,7 @@ public class OutboxRelay {
             } else if (correlation.getReturned() != null) {
                 fail(message, "Unroutable: " + correlation.getReturned().getReplyText(), now);
             } else {
-                message.markProcessed();
+                message.markProcessed(now);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
