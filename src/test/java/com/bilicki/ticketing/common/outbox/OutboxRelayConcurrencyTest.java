@@ -24,6 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -121,7 +122,7 @@ public class OutboxRelayConcurrencyTest {
         assertThat(sentMessageIds).hasSize(totalMessages);
 
         List<OutboxMessage> remainingPending = outboxMessageRepository.findNextBatchByStatus(
-                OutboxMessage.OutboxStatus.PENDING.name(), totalMessages
+                OutboxMessage.OutboxStatus.PENDING.name(), Instant.now(), totalMessages
         );
         assertThat(remainingPending).isEmpty();
 

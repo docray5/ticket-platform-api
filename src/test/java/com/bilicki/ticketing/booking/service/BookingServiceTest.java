@@ -20,7 +20,6 @@ import org.mapstruct.factory.Mappers;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -56,8 +55,6 @@ public class BookingServiceTest {
     @Captor
     private ArgumentCaptor<Hold> holdCaptor;
     @Mock
-    private ApplicationEventPublisher eventPublisher;
-    @Mock
     private PaymentFacade paymentFacade;
     @Mock
     private BookingRepository bookingRepository;
@@ -65,7 +62,10 @@ public class BookingServiceTest {
     private OutboxService outboxService;
 
     @Captor
-    private ArgumentCaptor<HoldExpiryMessage> eventCaptor;
+    private ArgumentCaptor<HoldExpiryMessage> expiryMessageCaptor;
+
+    @Captor
+    private ArgumentCaptor<HoldConfirmMessage> confirmMessageCaptor;
 
     private final Instant FIXED_TIME = Instant.parse("2026-08-23T12:00:00Z");
     private final Duration TTL = Duration.ofMinutes(5);
@@ -140,8 +140,8 @@ public class BookingServiceTest {
         assertThat(holdResponse.holdSeats().get(0).showtimeSeatId()).isEqualTo(showtimeSeatAId);
         assertThat(holdResponse.holdSeats().get(1).showtimeSeatId()).isEqualTo(showtimeSeatBId);
 
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        HoldExpiryMessage publishedEvent = eventCaptor.getValue();
+        verify(outboxService).recordEvent(eq(""), eq(bookingProperties.rabbitMq().expiry().delayQueueName()), expiryMessageCaptor.capture());
+        HoldExpiryMessage publishedEvent = expiryMessageCaptor.getValue();
         assertThat(publishedEvent.holdId()).isEqualTo(savedHold.getId());
         assertThat(publishedEvent.correlationId()).isEqualTo("corr-123");
     }
@@ -159,7 +159,7 @@ public class BookingServiceTest {
         );
 
         verify(holdRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxService, never()).recordEvent(any(), any(), any());
     }
 
     @Test
@@ -174,7 +174,7 @@ public class BookingServiceTest {
 
         verify(catalogFacade, never()).reserveShowtimeSeats(any(), any());
         verify(holdRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxService, never()).recordEvent(any(), any(), any());
     }
 
     @Test
@@ -186,8 +186,8 @@ public class BookingServiceTest {
 
         bookingService.createHold(showtimeId, userId, new HoldRequest(showtimeSeatIds));
 
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue().correlationId()).isNull();
+        verify(outboxService).recordEvent(eq(""), eq(bookingProperties.rabbitMq().expiry().delayQueueName()), expiryMessageCaptor.capture());
+        assertThat(expiryMessageCaptor.getValue().correlationId()).isNull();
     }
 
     @Test
@@ -345,9 +345,8 @@ public class BookingServiceTest {
         inOrder.verify(catalogFacade).confirmShowtimeSeats(any(), any());
         inOrder.verify(paymentFacade).pay(any(), any());
 
-        ArgumentCaptor<HoldConfirmMessage> confirmCaptor = ArgumentCaptor.forClass(HoldConfirmMessage.class);
-        verify(eventPublisher).publishEvent(confirmCaptor.capture());
-        HoldConfirmMessage publishedConfirm = confirmCaptor.getValue();
+        verify(outboxService).recordEvent(eq(bookingProperties.rabbitMq().confirm().exchangeName()), eq(bookingProperties.rabbitMq().confirm().routingKey()), confirmMessageCaptor.capture());
+        HoldConfirmMessage publishedConfirm = confirmMessageCaptor.getValue();
         assertThat(publishedConfirm.holdId()).isEqualTo(holdId);
         assertThat(publishedConfirm.userId()).isEqualTo(userId);
         assertThat(publishedConfirm.correlationId()).isEqualTo("corr-123");
@@ -362,7 +361,7 @@ public class BookingServiceTest {
                 .isInstanceOf(ForbiddenActionException.class)
                 .hasMessageContaining("permission");
 
-        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, eventPublisher);
+        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, outboxService);
     }
 
     @Test
@@ -373,7 +372,7 @@ public class BookingServiceTest {
         assertThatThrownBy(() -> bookingService.confirmHold(userId, request))
                 .isInstanceOf(HoldExpiredException.class);
 
-        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, eventPublisher);
+        verifyNoInteractions(paymentFacade, catalogFacade, bookingRepository, outboxService);
     }
 
     @Test

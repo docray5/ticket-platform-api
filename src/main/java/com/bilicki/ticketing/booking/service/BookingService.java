@@ -13,7 +13,6 @@ import com.bilicki.ticketing.config.BookingProperties;
 import com.bilicki.ticketing.payment.PaymentFacade;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -130,7 +129,7 @@ public class BookingService {
 
         paymentFacade.pay(request.holdId(), hold.getTotalPrice());
 
-        outboxService.recordEvent("", bookingProperties.rabbitMq().expiry().delayQueueName(), new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
+        outboxService.recordEvent(bookingProperties.rabbitMq().confirm().exchangeName(), bookingProperties.rabbitMq().confirm().routingKey(), new HoldConfirmMessage(hold.getId(), userId, MDC.get("correlationId")));
 
         return toEnrichedBookingResponse(booking);
     }

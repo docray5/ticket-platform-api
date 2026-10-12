@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -65,7 +66,7 @@ public class OutboxMessageRepositoryTest {
         executor.submit(() -> {
             try {
                 transactionTemplate.executeWithoutResult(status -> {
-                    List<OutboxMessage> batch1 = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), batchSize);
+                    List<OutboxMessage> batch1 = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), Instant.now(), batchSize);
                     batch1.forEach(msg -> thread1Ids.add(msg.getId()));
 
                     thread1HasLockedRows.countDown();
@@ -87,7 +88,7 @@ public class OutboxMessageRepositoryTest {
                 thread1HasLockedRows.await(5, TimeUnit.SECONDS);
 
                 transactionTemplate.executeWithoutResult(status -> {
-                    List<OutboxMessage> batch2 = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), batchSize);
+                    List<OutboxMessage> batch2 = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), Instant.now(), batchSize);
                     batch2.forEach(msg -> thread2Ids.add(msg.getId()));
                 });
             } catch (InterruptedException e) {

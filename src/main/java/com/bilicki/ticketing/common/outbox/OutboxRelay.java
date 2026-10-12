@@ -3,6 +3,7 @@ package com.bilicki.ticketing.common.outbox;
 import com.bilicki.ticketing.config.OutboxProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpConnectException;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -42,15 +43,19 @@ public class OutboxRelay {
 
     /** @return true if there are more messages to be processed still */
     public boolean publishOutboxMessages() {
-        List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), properties.batchSize());
-
         Instant now = Instant.now(clock);
+
+        List<OutboxMessage> messages = outboxMessageRepository.findNextBatchByStatus(OutboxMessage.OutboxStatus.PENDING.name(), now, properties.batchSize());
+
         Map<OutboxMessage, CorrelationData> inFlight = new LinkedHashMap<>();
         for (OutboxMessage message : messages) {
             CorrelationData correlation = new CorrelationData(message.getId().toString());
             try {
                 rabbitTemplate.convertAndSend(message.getExchange(), message.getRoutingKey(), toAmqpMessage(message), correlation);
                 inFlight.put(message, correlation);
+            } catch (AmqpConnectException e) {
+                log.warn("Broker connection refused while publishing message {}. Halting batch.", message.getId());
+                return false;
             } catch (AmqpException e) {
                 fail(message, e.getMessage(), now);
             }
