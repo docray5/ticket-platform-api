@@ -17,7 +17,7 @@ spring:
 
 app:
   outbox:
-    poll-interval-ms: PT0.2S
+    poll-interval: PT0.2S
     confirm-timeout: 1s
     max-retries: 50
     max-backoff-seconds: 2

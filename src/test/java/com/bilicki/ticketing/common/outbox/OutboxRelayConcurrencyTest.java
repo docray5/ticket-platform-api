@@ -60,7 +60,7 @@ class OutboxRelayConcurrencyTest {
     static class TestConfig {
         @Bean
         public OutboxProperties outboxProperties() {
-            return new OutboxProperties("PT0.2S", 3, 10, 60, Duration.ofSeconds(2));
+            return new OutboxProperties("PT0.2S", 3, 10, 60, Duration.ofSeconds(2), Duration.ofDays(7));
         }
 
         @Bean

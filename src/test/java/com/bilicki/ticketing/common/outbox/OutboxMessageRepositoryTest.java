@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -106,5 +107,32 @@ public class OutboxMessageRepositoryTest {
         assertThat(thread2Ids.size()).isEqualTo(batchSize);
 
         assertThat(thread1Ids).doesNotContainAnyElementsOf(thread2Ids);
+    }
+
+    @Test
+    void deleteByStatusAndProcessedAtBefore_shouldOnlyDeleteOldProcessedMessages() {
+        Instant now = Instant.now();
+        Instant cutoff = now.minus(Duration.ofDays(7));
+
+        OutboxMessage oldProcessed = new OutboxMessage("ex", "key", "{}");
+        oldProcessed.markProcessed(cutoff.minusSeconds(60));
+
+        OutboxMessage recentProcessed = new OutboxMessage("ex", "key", "{}");
+        recentProcessed.markProcessed(cutoff.plusSeconds(60));
+
+        OutboxMessage pendingMessage = new OutboxMessage("ex", "key", "{}");
+
+        outboxMessageRepository.saveAll(List.of(oldProcessed, recentProcessed, pendingMessage));
+
+        int deletedCount = transactionTemplate.execute(status ->
+                outboxMessageRepository.deleteByStatusAndProcessedAtBefore(
+                        OutboxMessage.OutboxStatus.PROCESSED, cutoff
+                )
+        );
+
+        assertThat(deletedCount).isEqualTo(1);
+        assertThat(outboxMessageRepository.findAll())
+                .extracting(OutboxMessage::getId)
+                .containsExactlyInAnyOrder(recentProcessed.getId(), pendingMessage.getId());
     }
 }

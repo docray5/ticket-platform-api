@@ -1,6 +1,7 @@
 package com.bilicki.ticketing.common.outbox;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.NativeQuery;
 import org.springframework.data.repository.query.Param;
 
@@ -19,5 +20,6 @@ public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, UU
     """)
     List<OutboxMessage> findNextBatchByStatus(@Param("status") String status, @Param("now") Instant now, int limit);
 
-
+    @Modifying
+    int deleteByStatusAndProcessedAtBefore(OutboxMessage.OutboxStatus status, Instant cutoff);
 }

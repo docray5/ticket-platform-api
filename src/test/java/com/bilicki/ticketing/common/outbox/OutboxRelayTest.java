@@ -58,7 +58,7 @@ public class OutboxRelayTest {
 
     @BeforeEach
     void setUp() {
-        properties = new OutboxProperties("PT0.2S", 3, 10, 60, Duration.ofMillis(200));
+        properties = new OutboxProperties("PT0.2S", 3, 10, 60, Duration.ofMillis(200), Duration.ofDays(7));
 
         lenient().doAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
@@ -156,7 +156,7 @@ public class OutboxRelayTest {
 
     @Test
     void backoffIsCappedAtMaxBackoffSeconds() {
-        OutboxProperties highRetryProperties = new OutboxProperties("PT0.2S", 100, 10, 60, Duration.ofMillis(200));
+        OutboxProperties highRetryProperties = new OutboxProperties("PT0.2S", 100, 10, 60, Duration.ofMillis(200), Duration.ofDays(7));
         OutboxRelay customRelay = new OutboxRelay(highRetryProperties, repository, rabbitTemplate, clock, transactionTemplate);
 
         OutboxMessage message = createPendingMessage();
