@@ -113,8 +113,7 @@ public class OutboxIntegrationTest {
         UUID holdId = UUID.randomUUID();
 
         transactionTemplate.executeWithoutResult(status -> outboxService.recordEvent(
-                "",
-                bookingProperties.rabbitMq().expiry().delayQueueName(),
+                "", bookingProperties.rabbitMq().expiry().delayQueueName(),
                 new HoldExpiryMessage(holdId, "corr-it")));
         UUID rowId = outboxRepository.findAll().getFirst().getId();
 
@@ -163,7 +162,7 @@ public class OutboxIntegrationTest {
         });
 
         unpauseBroker();
-        await().atMost(Duration.ofSeconds(60)).untilAsserted(() -> {
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
             assertThat(outboxRepository.findById(rowId).orElseThrow().getStatus())
                     .isEqualTo(OutboxMessage.OutboxStatus.PROCESSED);
             assertThat(holdRepository.findById(hold.holdId()).orElseThrow().getStatus())
