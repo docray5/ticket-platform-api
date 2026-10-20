@@ -95,6 +95,7 @@ Config overview (dev fallbacks in the application.yml):
 | `OUTBOX_POLL_INTERVAL`                | `PT1S`                                                            |
 | `OUTBOX_CONFIRM_TIMEOUT`              | `PT3S`                                                            |
 | `OUTBOX_PROCESSED_MESSAGES_RETENTION` | `7d`                                                              |
+| `MAX_CONNECTION_POOL_SIZE`            | `10`                                                              |
 
 ## Roadmap:
 
