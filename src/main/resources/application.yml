@@ -6,6 +6,8 @@ spring:
     username: ${DB_USERNAME:admin}
     password: ${DB_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${MAX_CONNECTION_POOL_SIZE:10}
   flyway:
     enabled: true
 
@@ -21,6 +23,10 @@ spring:
     virtual-host: ${RABBITMQ_VHOST:/}
     ssl:
       enabled: ${RABBITMQ_SSL:false}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
   config:
     import: optional:file:.env[.properties]
@@ -49,6 +55,13 @@ app:
     expiration-hours: 24
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  outbox:
+    poll-interval: ${OUTBOX_POLL_INTERVAL:PT1S}
+    max-retries: 8
+    batch-size: 20
+    max-backoff-seconds: 60
+    confirm-timeout: ${OUTBOX_CONFIRM_TIMEOUT:PT3S}
+    retention: ${OUTBOX_PROCESSED_MESSAGES_RETENTION:7d}
 
 booking:
   hold:

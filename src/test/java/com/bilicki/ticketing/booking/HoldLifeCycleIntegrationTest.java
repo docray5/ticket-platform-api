@@ -12,6 +12,7 @@ import com.bilicki.ticketing.booking.web.HoldRequest;
 import com.bilicki.ticketing.booking.web.HoldResponse;
 import com.bilicki.ticketing.catalog.SeatUnavailableException;
 import com.bilicki.ticketing.catalog.internal.*;
+import com.bilicki.ticketing.common.outbox.OutboxMessageRepository;
 import com.bilicki.ticketing.config.BookingProperties;
 import com.bilicki.ticketing.notification.NotificationFacade;
 import com.bilicki.ticketing.payment.PaymentFacade;
@@ -106,6 +107,8 @@ class HoldLifeCycleIntegrationTest {
     private AmqpAdmin amqpAdmin;
     @MockitoSpyBean
     private PaymentFacade paymentFacade;
+    @Autowired
+    private OutboxMessageRepository outboxMessageRepository;
 
     @BeforeEach
     void setUp() {
@@ -145,6 +148,7 @@ class HoldLifeCycleIntegrationTest {
         movieRepository.deleteAll();
         seatTypeRepository.deleteAll();
         userRepository.deleteAll();
+        outboxMessageRepository.deleteAll();
     }
 
     @Test

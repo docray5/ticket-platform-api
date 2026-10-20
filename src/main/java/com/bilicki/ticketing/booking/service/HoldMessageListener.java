@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
 
@@ -18,7 +17,6 @@ public class HoldMessageListener {
     private final NotificationFacade notificationFacade;
 
     @RabbitListener(queues = "${booking.rabbit-mq.expiry.queue-name}")
-    @Transactional
     public void handleHoldExpiry(HoldExpiryMessage event) {
         MDC.put("correlationId", event.correlationId());
 
