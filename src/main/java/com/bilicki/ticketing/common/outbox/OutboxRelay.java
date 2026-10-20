@@ -33,12 +33,12 @@ public class OutboxRelay {
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
-    @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:PT1S}")
+    @Scheduled(fixedDelayString = "${app.outbox.poll-interval:PT1S}")
     public void relay() {
         boolean moreLeftToProcess = true;
         while (moreLeftToProcess) {
             moreLeftToProcess = transactionTemplate.execute(status -> publishOutboxMessages());
-            if (moreLeftToProcess) log.info("Processing batch...");
+            if (moreLeftToProcess) log.debug("Processing batch...");
         }
     }
 
@@ -70,28 +70,39 @@ public class OutboxRelay {
         }
 
         long deadline = System.nanoTime() + properties.confirmTimeout().toNanos();
-        inFlight.forEach((message, correlation) -> awaitConfirm(message, correlation, deadline, now));
+        boolean anyConfirmed = false;
+        for (var entry : inFlight.entrySet()) {
+            if (awaitConfirm(entry.getKey(), entry.getValue(), deadline, now)) {
+                anyConfirmed = true;
+            }
+        }
 
-        return !brokerUnavailable && messages.size() == properties.batchSize();
+        boolean stalled = !inFlight.isEmpty() && !anyConfirmed;
+        return !brokerUnavailable && !stalled && messages.size() == properties.batchSize();
     }
 
-    private void awaitConfirm(OutboxMessage message, CorrelationData correlation, long deadlineNanos, Instant now) {
+    private boolean awaitConfirm(OutboxMessage message, CorrelationData correlation, long deadlineNanos, Instant now) {
         try {
             long remaining = Math.max(1, deadlineNanos - System.nanoTime());
             CorrelationData.Confirm confirm = correlation.getFuture().get(remaining, TimeUnit.NANOSECONDS);
 
             if (!confirm.ack()) {
                 fail(message, "Broker nack: " + confirm.reason(), now);
+                return false;
             } else if (correlation.getReturned() != null) {
                 fail(message, "Unroutable: " + correlation.getReturned().getReplyText(), now);
+                return false;
             } else {
                 message.markProcessed(now);
+                return true;
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             fail(message, "Interrupted while waiting for confirm", now);
+            return false;
         } catch (Exception e) {
             fail(message, "No confirm: " + e.getClass().getSimpleName() + " " + e.getMessage(), now);
+            return false;
         }
     }
 

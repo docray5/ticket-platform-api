@@ -74,8 +74,6 @@ public class OutboxRelayTest {
         return message;
     }
 
-    // ---------- broker outage ----------
-
     @Test
     void brokerDownOnFirstSend_leavesEverythingPending_withoutBurningRetries() {
         OutboxMessage m1 = pendingMessage();
@@ -96,9 +94,7 @@ public class OutboxRelayTest {
         }
         assertThat(m1.getNextAttemptAt()).isEqualTo(m1Due);
 
-        // halted after the first failure instead of hammering a dead broker...
         verify(rabbitTemplate, times(1)).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
-        // ...and the drain loop did not spin
         verify(repository, times(1)).findNextBatchByStatus(any(), any(), anyInt());
     }
 
@@ -139,8 +135,6 @@ public class OutboxRelayTest {
         assertThat(message.getLastError()).isNull();
     }
 
-    // ---------- backoff ----------
-
     @Test
     void firstFailure_schedulesRetryExactlyOneSecondLater() {
         OutboxMessage message = pendingMessage();
@@ -177,8 +171,6 @@ public class OutboxRelayTest {
         assertThat(message.getNextAttemptAt()).isEqualTo(now.plusSeconds(60));
     }
 
-    // ---------- batching ----------
-
     @Test
     void emptyBatch_isANoOp() {
         claimReturns();
@@ -213,7 +205,7 @@ public class OutboxRelayTest {
 
         doAnswer(ack())
                 .doAnswer(nack("rejected"))
-                .doAnswer(invocation -> null) // never completes the future -> confirm timeout
+                .doAnswer(invocation -> null)
                 .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
 
         outboxRelay.publishOutboxMessages();
@@ -359,6 +351,95 @@ public class OutboxRelayTest {
         verifyNoInteractions(rabbitTemplate);
     }
 
+    @Test
+    void brokerDown_onFullBatch_stopsTheDrainLoop() {
+        List<OutboxMessage> batch = fullBatch();
+        when(repository.findNextBatchByStatus(PENDING.name(), now, properties.batchSize())).thenReturn(batch, List.of());
+        doThrow(new AmqpConnectException(new ConnectException("Connection refused")))
+                .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+
+        outboxRelay.relay();
+
+        verify(repository, times(1)).findNextBatchByStatus(any(), any(), anyInt());
+        verify(rabbitTemplate, times(1)).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+        assertThat(batch).allSatisfy(message -> {
+            assertThat(message.getStatus()).isEqualTo(PENDING);
+            assertThat(message.getRetryCount()).isZero();
+        });
+    }
+
+    @Test
+    void brokerDownMidFullBatch_settlesWhatWasSent_thenStopsTheDrainLoop() {
+        List<OutboxMessage> batch = fullBatch();
+        claimReturns(batch.toArray(new OutboxMessage[0]));
+        doAnswer(ack()).doAnswer(ack()).doThrow(new AmqpIOException(new IOException("Connection reset")))
+                .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+
+        boolean moreToProcess = outboxRelay.publishOutboxMessages();
+
+        assertThat(moreToProcess).as("must not ask the drain loop to continue").isFalse();
+        assertThat(batch.subList(0, 2)).allMatch(message -> message.getStatus() == PROCESSED);
+        assertThat(batch.subList(2, batch.size())).allSatisfy(message -> {
+            assertThat(message.getStatus()).isEqualTo(PENDING);
+            assertThat(message.getRetryCount()).isZero();
+        });
+        verify(rabbitTemplate, times(3)).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+    }
+
+    @Test
+    void hungBroker_nothingConfirmedOnFullBatch_stopsTheDrainLoop() {
+        List<OutboxMessage> batch = fullBatch();
+        when(repository.findNextBatchByStatus(PENDING.name(), now, properties.batchSize())).thenReturn(batch, List.of());
+        doAnswer(invocation -> null)
+                .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+
+        outboxRelay.relay();
+
+        verify(repository, times(1)).findNextBatchByStatus(any(), any(), anyInt());
+        assertThat(batch).allSatisfy(message -> {
+            assertThat(message.getStatus()).isEqualTo(PENDING);
+            assertThat(message.getRetryCount()).isEqualTo(1);
+            assertThat(message.getLastError()).contains("TimeoutException");
+        });
+    }
+
+    @Test
+    void fullBatch_withAtLeastOneConfirm_isNotAStall_andKeepsDraining() {
+        List<OutboxMessage> batch = fullBatch();
+        claimReturns(batch.toArray(new OutboxMessage[0]));
+        doAnswer(ack())
+                .doAnswer(invocation -> null)
+                .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+
+        boolean moreToProcess = outboxRelay.publishOutboxMessages();
+
+        assertThat(moreToProcess).as("the broker is delivering, so keep draining").isTrue();
+        assertThat(batch.getFirst().getStatus()).isEqualTo(PROCESSED);
+        assertThat(batch.subList(1, batch.size())).allSatisfy(message ->
+                assertThat(message.getRetryCount()).isEqualTo(1));
+    }
+
+    @Test
+    void fullBatch_allNacked_isAStall() {
+        List<OutboxMessage> batch = fullBatch();
+        claimReturns(batch.toArray(new OutboxMessage[0]));
+        doAnswer(nack("rejected"))
+                .when(rabbitTemplate).convertAndSend(any(), any(), any(Message.class), any(CorrelationData.class));
+
+        boolean moreToProcess = outboxRelay.publishOutboxMessages();
+
+        assertThat(moreToProcess).isFalse();
+        assertThat(batch).allSatisfy(message -> {
+            assertThat(message.getRetryCount()).isEqualTo(1);
+            assertThat(message.getLastError()).contains("Broker nack: rejected");
+        });
+    }
+
+    private List<OutboxMessage> fullBatch() {
+        return IntStream.range(0, properties.batchSize())
+                .mapToObj(i -> pendingMessage())
+                .toList();
+    }
 
     private OutboxMessage pendingMessage() {
         OutboxMessage message = new OutboxMessage("booking.exchange", "booking.key", "{\"some\":\"json\"}");
